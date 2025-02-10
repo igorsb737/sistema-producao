@@ -13,8 +13,19 @@ interface Produto {
   precoCusto: number;
   situacao: string;
   tipo: string;
-  idProdutoPai?: string; // Opcional pois nem todos os produtos têm essa propriedade
+  idProdutoPai?: string;
 }
+
+// Adiciona logs para debug
+const logProduto = (produto: Produto) => {
+  console.log('Produto processado:', {
+    id: produto.id,
+    nome: produto.nome,
+    codigo: produto.codigo,
+    idProdutoPai: produto.idProdutoPai
+  });
+  return produto;
+};
 
 export const useProdutos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -28,22 +39,11 @@ export const useProdutos = () => {
       try {
         const data = snapshot.val();
         if (data) {
-          // Convertendo o objeto em array e mantendo a estrutura completa
-          const produtosList = Object.entries(data)
-            .map(([id, produto]) => {
-              const produtoCompleto = {
-                id,
-                ...(produto as Omit<Produto, 'id'>),
-              };
-              console.log('Produto:', produtoCompleto.nome, 'idProdutoPai:', produtoCompleto.idProdutoPai);
-              return produtoCompleto;
-            })
-            .filter(produto => {
-              // Exclui produtos que têm idProdutoPai ou que têm especificação de tamanho no nome
-              const temProdutoPai = produto.hasOwnProperty('idProdutoPai') && produto.idProdutoPai;
-              const temTamanho = produto.nome.includes('TAMANHO:');
-              return !temProdutoPai && !temTamanho;
-            });
+          // Convertendo o objeto em array mantendo todos os produtos
+          const produtosList = Object.entries(data).map(([id, produto]) => ({
+            id,
+            ...(produto as Omit<Produto, 'id'>)
+          }));
           setProdutos(produtosList);
         } else {
           setProdutos([]);

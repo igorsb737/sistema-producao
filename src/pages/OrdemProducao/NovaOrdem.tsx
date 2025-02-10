@@ -22,6 +22,7 @@ import dayjs from 'dayjs';
 
 interface Grade {
   codigo: string;
+  produtoId?: string;
   quantidadePrevista: number;
   entregas: number[];
 }
@@ -31,6 +32,7 @@ interface ItemSelecionado {
   nome: string;
   codigo?: string;
   descricaoCurta?: string;
+  idProdutoPai?: string;
 }
 
 const NovaOrdemProducao = () => {
@@ -48,11 +50,13 @@ const NovaOrdemProducao = () => {
   const { produtos, loading: loadingProdutos, error: errorProdutos } = useProdutos();
   const { malhas, loading: loadingMalhas, error: errorMalhas } = useMalhas();
   const { ribanas, loading: loadingRibanas, error: errorRibanas } = useRibanas();
+  
   const adicionarGrade = () => {
     if (!itemSelecionado) return;
     
     const novaGrade: Grade = {
       codigo: '',
+      produtoId: '',
       quantidadePrevista: 0,
       entregas: [],
     };
@@ -192,48 +196,61 @@ const NovaOrdemProducao = () => {
           Solicitação
         </Typography>
         <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Autocomplete
+          <Grid item container xs={12} spacing={2}>
+            <Grid item xs={9}>
+              <Autocomplete
               options={produtos}
               value={itemSelecionado}
-              onChange={(_, newValue) => setItemSelecionado(newValue)}
+              onChange={(_, newValue) => {
+                console.log('Novo item selecionado:', newValue);
+                setItemSelecionado(newValue);
+                // Limpa as grades quando muda o item principal
+                setGrades([]);
+              }}
               loading={loadingProdutos}
               getOptionLabel={(option) => option.nome}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               filterOptions={(options, { inputValue }) => {
-                if (!itemSelecionado) {
-                  // Se não houver item selecionado, filtra normalmente pelo input
-                  if (!inputValue) return options;
-                  const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                  return options.filter(option => {
-                    const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
-                    return terms.every(term => searchText.includes(term));
-                  });
-                } else {
-                  // Se já houver um item selecionado, mostra apenas os produtos relacionados
-                  if (!itemSelecionado.codigo) return options;
-                  const codigoProdutoSelecionado = itemSelecionado.codigo.substring(0, 4);
-                  return options.filter(option => {
-                    if (!option.codigo) return false;
-                    const codigoOption = option.codigo.substring(0, 4);
-                    return codigoOption === codigoProdutoSelecionado;
-                  });
-                }
+                // Filtra produtos que são pais (sem idProdutoPai) e não têm TAMANHO no nome
+                const produtosFiltrados = options.filter(option => 
+                  !option.idProdutoPai && !option.nome.includes('TAMANHO:')
+                );
+                
+                if (!inputValue) return produtosFiltrados;
+                
+                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                return produtosFiltrados.filter(option => {
+                  const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                  return terms.every(term => searchText.includes(term));
+                });
               }}
-                renderInput={(params: any) => (
+              renderInput={(params: any) => (
                 <TextField 
                   {...params} 
                   label="Item" 
                   fullWidth 
                   size="small"
                   error={!!errorProdutos}
-                  helperText={errorProdutos}
+                      helperText={errorProdutos || "Somente itens relacionados ao item principal podem ser selecionados"}
                   InputLabelProps={{
                     shrink: true
                   }}
                 />
               )}
             />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                label="Id do Item"
+                value={itemSelecionado?.id || '-'}
+                disabled
+                fullWidth
+                size="small"
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Grid>
           </Grid>
           <Grid item container xs={12} spacing={2}>
             <Grid item xs={9}>
@@ -345,28 +362,65 @@ const NovaOrdemProducao = () => {
         </Box>
 
         {grades.map((grade, index) => (
-          <Box key={grade.codigo} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+          <Box key={grade.codigo || index} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={8}>
+              <Grid item xs={12} md={7}>
                 <Autocomplete
                   options={produtos}
-                  value={produtos.find(p => p.codigo === grade.codigo) || null}
+                  value={produtos.find(p => {
+                    console.log('Procurando produto:', { codigo: grade.codigo, id: grade.produtoId }, 'entre:', { codigo: p.codigo, id: p.id });
+                    return (grade.produtoId && p.id === grade.produtoId) || (grade.codigo && p.codigo === grade.codigo);
+                  }) || null}
                   onChange={(_, newValue) => {
+                    console.log('Novo valor selecionado na grade:', newValue);
                     const newGrades = [...grades];
-                    newGrades[index].codigo = newValue?.codigo || '';
+                    if (newValue) {
+                      newGrades[index] = {
+                        ...newGrades[index],
+                        codigo: newValue.codigo || '',
+                        produtoId: newValue.id
+                      };
+                    } else {
+                      newGrades[index] = {
+                        ...newGrades[index],
+                        codigo: '',
+                        produtoId: ''
+                      };
+                    }
+                    console.log('Grades atualizadas:', newGrades);
                     setGrades(newGrades);
                   }}
                   loading={loadingProdutos}
                   getOptionLabel={(option) => option.nome}
-                  isOptionEqualToValue={(option, value) => option.codigo === value.codigo}
-                  filterOptions={(options) => {
-                    if (!itemSelecionado?.codigo) return [];
-                    const codigoProdutoSelecionado = itemSelecionado.codigo.substring(0, 4);
-                    return options.filter(option => {
-                      if (!option.codigo) return false;
-                      const codigoOption = option.codigo.substring(0, 4);
-                      return codigoOption === codigoProdutoSelecionado;
+                  isOptionEqualToValue={(option, value) => {
+                    console.log('Comparando opção:', option, 'com valor:', value);
+                    if (!option || !value) return false;
+                    return option.codigo === value.codigo || option.id === value.id;
+                  }}
+                  filterOptions={(options, { inputValue }) => {
+                    // Primeiro filtra por idProdutoPai
+                    console.log('Item Selecionado na Grade:', itemSelecionado);
+                    console.log('Todas as opções:', options);
+                    
+                    const filteredByParent = options.filter(option => {
+                      console.log('Verificando opção:', option.nome, 'idProdutoPai:', option.idProdutoPai);
+                      return option.idProdutoPai === itemSelecionado?.id;
                     });
+                    
+                    console.log('Opções filtradas por pai:', filteredByParent);
+                    
+                    // Se não houver texto de busca, retorna todos os itens filtrados pelo pai
+                    if (!inputValue) return filteredByParent;
+                    
+                    // Se houver texto de busca, filtra também pelo texto
+                    const searchTerms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                    const finalFiltered = filteredByParent.filter(option => {
+                      const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                      return searchTerms.every(term => searchText.includes(term));
+                    });
+                    
+                    console.log('Opções finais após busca:', finalFiltered);
+                    return finalFiltered;
                   }}
                   renderInput={(params) => (
                     <TextField
@@ -376,11 +430,14 @@ const NovaOrdemProducao = () => {
                       size="small"
                       error={!!errorProdutos}
                       helperText={errorProdutos}
+                      InputLabelProps={{
+                        shrink: true
+                      }}
                     />
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid item xs={12} md={3}>
                 <TextField
                   label="Quantidade Prevista"
                   type="number"
@@ -396,6 +453,7 @@ const NovaOrdemProducao = () => {
               </Grid>
               <Grid item xs={12} md={2}>
                 <Button
+                  sx={{ marginLeft: 4 }}
                   variant="outlined"
                   color="error"
                   onClick={() => {
