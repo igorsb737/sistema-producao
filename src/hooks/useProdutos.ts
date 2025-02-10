@@ -39,12 +39,10 @@ export const useProdutos = () => {
               return produtoCompleto;
             })
             .filter(produto => {
-              // Filtra apenas produtos que definitivamente NÃO têm idProdutoPai definido
-              // e que não contenham 'COR:' ou 'TAMANHO:' no nome
-              const temPai = produto.hasOwnProperty('idProdutoPai') && produto.idProdutoPai !== '';
-              const ehVariacao = produto.nome.includes('COR:') || produto.nome.includes('TAMANHO:');
-              console.log('Filtro:', produto.nome, 'idProdutoPai:', produto.idProdutoPai, 'temPai:', temPai, 'ehVariacao:', ehVariacao);
-              return !temPai && !ehVariacao; // Retorna true apenas se NÃO tiver pai e NÃO for variação
+              // Exclui produtos que têm idProdutoPai ou que têm especificação de tamanho no nome
+              const temProdutoPai = produto.hasOwnProperty('idProdutoPai') && produto.idProdutoPai;
+              const temTamanho = produto.nome.includes('TAMANHO:');
+              return !temProdutoPai && !temTamanho;
             });
           setProdutos(produtosList);
         } else {

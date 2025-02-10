@@ -22,9 +22,7 @@ import dayjs from 'dayjs';
 
 interface Grade {
   codigo: string;
-  tamanho: string;
-  cor: string;
-  quantidade: number;
+  quantidadePrevista: number;
   entregas: number[];
 }
 
@@ -44,21 +42,18 @@ const NovaOrdemProducao = () => {
   const [malhaSelecionada, setMalhaSelecionada] = useState<ItemSelecionado | null>(null);
   const [ribanaSelecionada, setRibanaSelecionada] = useState<ItemSelecionado | null>(null);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [previsaoMalha, setPrevisaoMalha] = useState('');
+  const [previsaoRibana, setPrevisaoRibana] = useState('');
 
   const { produtos, loading: loadingProdutos, error: errorProdutos } = useProdutos();
   const { malhas, loading: loadingMalhas, error: errorMalhas } = useMalhas();
   const { ribanas, loading: loadingRibanas, error: errorRibanas } = useRibanas();
-  const tamanhos = ['P', 'M', 'G', 'GG', 'XG', 'XGG'];
-  const cores = ['Preto', 'Branco', 'Azul', 'Vermelho'];
-
   const adicionarGrade = () => {
     if (!itemSelecionado) return;
     
     const novaGrade: Grade = {
-      codigo: `${itemSelecionado.nome}-${grades.length + 1}`,
-      tamanho: '',
-      cor: '',
-      quantidade: 0,
+      codigo: '',
+      quantidadePrevista: 0,
       entregas: [],
     };
     setGrades([...grades, novaGrade]);
@@ -83,9 +78,11 @@ const NovaOrdemProducao = () => {
         item: itemSelecionado.nome,
         malha: malhaSelecionada.nome,
         ribana: ribanaSelecionada.nome,
+        previsaoMalha,
+        previsaoRibana,
         grades,
         status: 'Aberta',
-        totalCamisetas: grades.reduce((total, grade) => total + grade.quantidade, 0),
+        totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
       });
       
       navigate('/ordens');
@@ -113,8 +110,7 @@ const NovaOrdemProducao = () => {
             <DatePicker
               label="Data de Início"
               value={dataInicio}
-              disabled
-              slotProps={{ textField: { fullWidth: true } }}
+              slotProps={{ textField: { fullWidth: true, size: "small" } }}
             />
           </Grid>
           <Grid item xs={12} md={4}>
@@ -125,6 +121,7 @@ const NovaOrdemProducao = () => {
               slotProps={{ 
                 textField: { 
                   fullWidth: true,
+                  size: "small",
                   InputLabelProps: {
                     shrink: true
                   }
@@ -140,6 +137,7 @@ const NovaOrdemProducao = () => {
               slotProps={{ 
                 textField: { 
                   fullWidth: true,
+                  size: "small",
                   InputLabelProps: {
                     shrink: true
                   }
@@ -153,6 +151,7 @@ const NovaOrdemProducao = () => {
               value={cliente}
               onChange={(e) => setCliente(e.target.value)}
               fullWidth
+              size="small"
               InputLabelProps={{
                 shrink: true
               }}
@@ -164,6 +163,7 @@ const NovaOrdemProducao = () => {
               value="Em Aberto"
               disabled
               fullWidth
+              size="small"
             />
           </Grid>
           <Grid item xs={12} md={3}>
@@ -172,6 +172,7 @@ const NovaOrdemProducao = () => {
               value="-"
               disabled
               fullWidth
+              size="small"
             />
           </Grid>
           <Grid item xs={12} md={3}>
@@ -180,6 +181,7 @@ const NovaOrdemProducao = () => {
               value="-"
               disabled
               fullWidth
+              size="small"
             />
           </Grid>
         </Grid>
@@ -199,20 +201,31 @@ const NovaOrdemProducao = () => {
               getOptionLabel={(option) => option.nome}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               filterOptions={(options, { inputValue }) => {
-                if (!inputValue) return options;
-                
-                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                
-                return options.filter(option => {
-                  const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
-                  return terms.every(term => searchText.includes(term));
-                });
+                if (!itemSelecionado) {
+                  // Se não houver item selecionado, filtra normalmente pelo input
+                  if (!inputValue) return options;
+                  const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                  return options.filter(option => {
+                    const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                    return terms.every(term => searchText.includes(term));
+                  });
+                } else {
+                  // Se já houver um item selecionado, mostra apenas os produtos relacionados
+                  if (!itemSelecionado.codigo) return options;
+                  const codigoProdutoSelecionado = itemSelecionado.codigo.substring(0, 4);
+                  return options.filter(option => {
+                    if (!option.codigo) return false;
+                    const codigoOption = option.codigo.substring(0, 4);
+                    return codigoOption === codigoProdutoSelecionado;
+                  });
+                }
               }}
-              renderInput={(params) => (
+                renderInput={(params: any) => (
                 <TextField 
                   {...params} 
                   label="Item" 
                   fullWidth 
+                  size="small"
                   error={!!errorProdutos}
                   helperText={errorProdutos}
                   InputLabelProps={{
@@ -222,69 +235,99 @@ const NovaOrdemProducao = () => {
               )}
             />
           </Grid>
-          <Grid item xs={12}>
-            <Autocomplete
-              options={malhas}
-              value={malhaSelecionada}
-              onChange={(_, newValue) => setMalhaSelecionada(newValue)}
-              loading={loadingMalhas}
-              getOptionLabel={(option) => option.nome}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              filterOptions={(options, { inputValue }) => {
-                if (!inputValue) return options;
-                
-                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                
-                return options.filter(option => {
-                  const searchText = option.nome.toLowerCase();
-                  return terms.every(term => searchText.includes(term));
-                });
-              }}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="Malha" 
-                  fullWidth 
-                  error={!!errorMalhas}
-                  helperText={errorMalhas}
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                />
-              )}
-            />
+          <Grid item container xs={12} spacing={2}>
+            <Grid item xs={9}>
+              <Autocomplete
+                options={malhas}
+                value={malhaSelecionada}
+                onChange={(_, newValue) => setMalhaSelecionada(newValue)}
+                loading={loadingMalhas}
+                getOptionLabel={(option) => option.nome}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue) return options;
+                  
+                  const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                  
+                  return options.filter(option => {
+                    const searchText = option.nome.toLowerCase();
+                    return terms.every(term => searchText.includes(term));
+                  });
+                }}
+                renderInput={(params: any) => (
+                  <TextField 
+                    {...params} 
+                    label="Malha" 
+                    fullWidth 
+                    size="small"
+                    error={!!errorMalhas}
+                    helperText={errorMalhas}
+                    InputLabelProps={{
+                      shrink: true
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                label="Previsão de Consumo de Malha"
+                value={previsaoMalha}
+                onChange={(e) => setPrevisaoMalha(e.target.value)}
+                fullWidth
+                size="small"
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12}>
-            <Autocomplete
-              options={ribanas}
-              value={ribanaSelecionada}
-              onChange={(_, newValue) => setRibanaSelecionada(newValue)}
-              loading={loadingRibanas}
-              getOptionLabel={(option) => option.nome}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              filterOptions={(options, { inputValue }) => {
-                if (!inputValue) return options;
-                
-                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                
-                return options.filter(option => {
-                  const searchText = option.nome.toLowerCase();
-                  return terms.every(term => searchText.includes(term));
-                });
-              }}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="Ribana" 
-                  fullWidth 
-                  error={!!errorRibanas}
-                  helperText={errorRibanas}
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                />
-              )}
-            />
+          <Grid item container xs={12} spacing={2}>
+            <Grid item xs={9}>
+              <Autocomplete
+                options={ribanas}
+                value={ribanaSelecionada}
+                onChange={(_, newValue) => setRibanaSelecionada(newValue)}
+                loading={loadingRibanas}
+                getOptionLabel={(option) => option.nome}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue) return options;
+                  
+                  const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                  
+                  return options.filter(option => {
+                    const searchText = option.nome.toLowerCase();
+                    return terms.every(term => searchText.includes(term));
+                  });
+                }}
+                renderInput={(params: any) => (
+                  <TextField 
+                    {...params} 
+                    label="Ribana" 
+                    fullWidth 
+                    size="small"
+                    error={!!errorRibanas}
+                    helperText={errorRibanas}
+                    InputLabelProps={{
+                      shrink: true
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                label="Previsão de Consumo de Ribana"
+                value={previsaoRibana}
+                onChange={(e) => setPrevisaoRibana(e.target.value)}
+                fullWidth
+                size="small"
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Grid>
           </Grid>
         </Grid>
       </Paper>
@@ -304,65 +347,51 @@ const NovaOrdemProducao = () => {
         {grades.map((grade, index) => (
           <Box key={grade.codigo} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={2}>
-                <TextField
-                  label="Código"
-                  value={grade.codigo}
-                  disabled
-                  fullWidth
+              <Grid item xs={12} md={8}>
+                <Autocomplete
+                  options={produtos}
+                  value={produtos.find(p => p.codigo === grade.codigo) || null}
+                  onChange={(_, newValue) => {
+                    const newGrades = [...grades];
+                    newGrades[index].codigo = newValue?.codigo || '';
+                    setGrades(newGrades);
+                  }}
+                  loading={loadingProdutos}
+                  getOptionLabel={(option) => option.nome}
+                  isOptionEqualToValue={(option, value) => option.codigo === value.codigo}
+                  filterOptions={(options) => {
+                    if (!itemSelecionado?.codigo) return [];
+                    const codigoProdutoSelecionado = itemSelecionado.codigo.substring(0, 4);
+                    return options.filter(option => {
+                      if (!option.codigo) return false;
+                      const codigoOption = option.codigo.substring(0, 4);
+                      return codigoOption === codigoProdutoSelecionado;
+                    });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Item Grade"
+                      fullWidth
+                      size="small"
+                      error={!!errorProdutos}
+                      helperText={errorProdutos}
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={12} md={2}>
-                <FormControl fullWidth>
-                  <InputLabel>Tamanho</InputLabel>
-                  <Select
-                    value={grade.tamanho}
-                    label="Tamanho"
-                    onChange={(e) => {
-                      const newGrades = [...grades];
-                      newGrades[index].tamanho = e.target.value;
-                      setGrades(newGrades);
-                    }}
-                  >
-                    {tamanhos.map((tamanho) => (
-                      <MenuItem key={tamanho} value={tamanho}>
-                        {tamanho}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <FormControl fullWidth>
-                  <InputLabel>Cor</InputLabel>
-                  <Select
-                    value={grade.cor}
-                    label="Cor"
-                    onChange={(e) => {
-                      const newGrades = [...grades];
-                      newGrades[index].cor = e.target.value;
-                      setGrades(newGrades);
-                    }}
-                  >
-                    {cores.map((cor) => (
-                      <MenuItem key={cor} value={cor}>
-                        {cor}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={2}>
                 <TextField
-                  label="Quantidade"
+                  label="Quantidade Prevista"
                   type="number"
-                  value={grade.quantidade}
+                  value={grade.quantidadePrevista}
                   onChange={(e) => {
                     const newGrades = [...grades];
-                    newGrades[index].quantidade = Number(e.target.value);
+                    newGrades[index].quantidadePrevista = Number(e.target.value);
                     setGrades(newGrades);
                   }}
                   fullWidth
+                  size="small"
                 />
               </Grid>
               <Grid item xs={12} md={2}>

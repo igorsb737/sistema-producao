@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react';
 
 interface Grade {
   codigo: string;
-  tamanho: string;
-  cor: string;
-  quantidade: number;
+  quantidadePrevista: number;
   entregas: number[];
 }
 
@@ -22,8 +20,10 @@ export interface OrdemProducao {
   item: string;
   malha: string;
   consumoMalha?: number;
+  previsaoMalha?: string;
   ribana: string;
   consumoRibana?: number;
+  previsaoRibana?: string;
   grades: Grade[];
 }
 
@@ -74,7 +74,7 @@ export const useOrdemProducao = () => {
         ...ordem,
         numero: proximoNumero.toString().padStart(4, '0'),
         status: 'Aberta',
-        totalCamisetas: ordem.grades.reduce((total, grade) => total + grade.quantidade, 0),
+        totalCamisetas: ordem.grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
       };
 
       await set(novaOrdemRef, novaOrdem);
