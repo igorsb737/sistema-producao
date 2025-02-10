@@ -120,14 +120,48 @@ const NovaOrdemProducao = () => {
               label="Data de Entrega"
               value={dataEntrega}
               onChange={setDataEntrega}
-              slotProps={{ textField: { fullWidth: true } }}
+              slotProps={{ 
+                textField: { 
+                  fullWidth: true,
+                  InputLabelProps: {
+                    shrink: true
+                  }
+                } 
+              }}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <TextField
               label="Cliente"
               value={cliente}
               onChange={(e) => setCliente(e.target.value)}
+              fullWidth
+              InputLabelProps={{
+                shrink: true
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              label="Status"
+              value="Em Aberto"
+              disabled
+              fullWidth
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              label="Rendimento"
+              value="-"
+              disabled
+              fullWidth
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              label="Peças Total"
+              value="-"
+              disabled
               fullWidth
             />
           </Grid>
@@ -139,7 +173,7 @@ const NovaOrdemProducao = () => {
           Solicitação
         </Typography>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12}>
             <Autocomplete
               options={produtos}
               value={itemSelecionado}
@@ -164,11 +198,14 @@ const NovaOrdemProducao = () => {
                   fullWidth 
                   error={!!errorProdutos}
                   helperText={errorProdutos}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
                 />
               )}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12}>
             <Autocomplete
               options={malhas}
               value={malhaSelecionada}
@@ -193,11 +230,14 @@ const NovaOrdemProducao = () => {
                   fullWidth 
                   error={!!errorMalhas}
                   helperText={errorMalhas}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
                 />
               )}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12}>
             <Autocomplete
               options={ribanas}
               value={ribanaSelecionada}
@@ -222,6 +262,9 @@ const NovaOrdemProducao = () => {
                   fullWidth 
                   error={!!errorRibanas}
                   helperText={errorRibanas}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
                 />
               )}
             />

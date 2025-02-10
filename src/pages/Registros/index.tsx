@@ -12,8 +12,6 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import { useBling } from '../../hooks/useBling';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -24,28 +22,6 @@ interface Produto {
   codigo: string;
   preco: number;
   situacao: string;
-}
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`tabpanel-${index}`}
-      aria-labelledby={`tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
 }
 
 export const Registros = () => {
@@ -69,12 +45,6 @@ export const Registros = () => {
   const [sincronizando, setSincronizando] = useState(false);
   const [sincronizandoMalha, setSincronizandoMalha] = useState(false);
   const [sincronizandoRibana, setSincronizandoRibana] = useState(false);
-  const [tabValue, setTabValue] = useState(0);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
   const carregarDados = async () => {
     try {
       const [produtosData, malhasData, ribanasData] = await Promise.all([
@@ -133,6 +103,37 @@ export const Registros = () => {
     carregarDados();
   }, []);
 
+  const tableContainerStyle = {
+    width: '100%',
+    overflowX: 'auto',
+    overflowY: 'auto',
+    maxHeight: '70vh'
+  };
+
+  const tableStyle = {
+    minWidth: 650
+  };
+
+  const cellStyle = {
+    padding: '16px',
+    fontSize: '14px'
+  };
+
+  const nameCellStyle = {
+    padding: '16px',
+    fontSize: '14px',
+    maxWidth: '500px',
+    whiteSpace: 'normal',
+    wordBreak: 'break-all',
+    overflowWrap: 'break-word'
+  };
+
+  const otherCellStyle = {
+    padding: '16px',
+    fontSize: '14px',
+    minWidth: '100px'
+  };
+
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 3, mt: 3 }}>Registros</Typography>
@@ -143,15 +144,8 @@ export const Registros = () => {
         </Alert>
       )}
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="registros tabs">
-          <Tab label="Produtos" />
-          <Tab label="Malha" />
-          <Tab label="Ribana" />
-        </Tabs>
-      </Box>
-
-      <TabPanel value={tabValue} index={0}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>Produtos</Typography>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="contained"
@@ -163,14 +157,14 @@ export const Registros = () => {
           </Button>
         </Box>
         <Paper>
-          <TableContainer>
-            <Table>
+          <TableContainer sx={tableContainerStyle}>
+            <Table sx={tableStyle}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '15%' }}>ID</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Código</TableCell>
-                  <TableCell sx={{ width: '55%' }}>Nome</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Situação</TableCell>
+                  <TableCell sx={otherCellStyle}>ID</TableCell>
+                  <TableCell sx={otherCellStyle}>Código</TableCell>
+                  <TableCell sx={nameCellStyle}>Nome</TableCell>
+                  <TableCell sx={otherCellStyle}>Situação</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -189,10 +183,10 @@ export const Registros = () => {
                 ) : (
                   produtos.map((produto) => (
                     <TableRow key={produto.id}>
-                      <TableCell>{produto.id}</TableCell>
-                      <TableCell>{produto.codigo}</TableCell>
-                      <TableCell>{produto.nome}</TableCell>
-                      <TableCell>{produto.situacao}</TableCell>
+                      <TableCell sx={otherCellStyle}>{produto.id}</TableCell>
+                      <TableCell sx={otherCellStyle}>{produto.codigo}</TableCell>
+                      <TableCell sx={nameCellStyle}>{produto.nome}</TableCell>
+                      <TableCell sx={otherCellStyle}>{produto.situacao}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -200,9 +194,10 @@ export const Registros = () => {
             </Table>
           </TableContainer>
         </Paper>
-      </TabPanel>
+      </Box>
 
-      <TabPanel value={tabValue} index={1}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>Malhas</Typography>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="contained"
@@ -214,14 +209,14 @@ export const Registros = () => {
           </Button>
         </Box>
         <Paper>
-          <TableContainer>
-            <Table>
+          <TableContainer sx={tableContainerStyle}>
+            <Table sx={tableStyle}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '15%' }}>ID</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Código</TableCell>
-                  <TableCell sx={{ width: '55%' }}>Nome</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Situação</TableCell>
+                  <TableCell sx={otherCellStyle}>ID</TableCell>
+                  <TableCell sx={otherCellStyle}>Código</TableCell>
+                  <TableCell sx={nameCellStyle}>Nome</TableCell>
+                  <TableCell sx={otherCellStyle}>Situação</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -240,10 +235,10 @@ export const Registros = () => {
                 ) : (
                   malhas.map((malha) => (
                     <TableRow key={malha.id}>
-                      <TableCell>{malha.id}</TableCell>
-                      <TableCell>{malha.codigo}</TableCell>
-                      <TableCell>{malha.nome}</TableCell>
-                      <TableCell>{malha.situacao}</TableCell>
+                      <TableCell sx={otherCellStyle}>{malha.id}</TableCell>
+                      <TableCell sx={otherCellStyle}>{malha.codigo}</TableCell>
+                      <TableCell sx={nameCellStyle}>{malha.nome}</TableCell>
+                      <TableCell sx={otherCellStyle}>{malha.situacao}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -251,9 +246,10 @@ export const Registros = () => {
             </Table>
           </TableContainer>
         </Paper>
-      </TabPanel>
+      </Box>
 
-      <TabPanel value={tabValue} index={2}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>Ribanas</Typography>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="contained"
@@ -265,14 +261,14 @@ export const Registros = () => {
           </Button>
         </Box>
         <Paper>
-          <TableContainer>
-            <Table>
+          <TableContainer sx={tableContainerStyle}>
+            <Table sx={tableStyle}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '15%' }}>ID</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Código</TableCell>
-                  <TableCell sx={{ width: '55%' }}>Nome</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Situação</TableCell>
+                  <TableCell sx={otherCellStyle}>ID</TableCell>
+                  <TableCell sx={otherCellStyle}>Código</TableCell>
+                  <TableCell sx={nameCellStyle}>Nome</TableCell>
+                  <TableCell sx={otherCellStyle}>Situação</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -291,10 +287,10 @@ export const Registros = () => {
                 ) : (
                   ribanas.map((ribana) => (
                     <TableRow key={ribana.id}>
-                      <TableCell>{ribana.id}</TableCell>
-                      <TableCell>{ribana.codigo}</TableCell>
-                      <TableCell>{ribana.nome}</TableCell>
-                      <TableCell>{ribana.situacao}</TableCell>
+                      <TableCell sx={otherCellStyle}>{ribana.id}</TableCell>
+                      <TableCell sx={otherCellStyle}>{ribana.codigo}</TableCell>
+                      <TableCell sx={nameCellStyle}>{ribana.nome}</TableCell>
+                      <TableCell sx={otherCellStyle}>{ribana.situacao}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -302,7 +298,7 @@ export const Registros = () => {
             </Table>
           </TableContainer>
         </Paper>
-      </TabPanel>
+      </Box>
     </Box>
   );
 };
