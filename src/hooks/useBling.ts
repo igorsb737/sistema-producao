@@ -8,11 +8,12 @@ interface ProdutoBling {
   codigo: string;
   preco: number;
   situacao: string;
-  // Adicionar outros campos conforme necessário
 }
 
 export const useBling = () => {
   const [loading, setLoading] = useState(false);
+  const [loadingMalha, setLoadingMalha] = useState(false);
+  const [loadingRibana, setLoadingRibana] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const atualizarToken = async (): Promise<string> => {
@@ -50,12 +51,12 @@ export const useBling = () => {
     }
   };
 
-  const fetchProdutos = async (token: string, pagina: number = 1): Promise<ProdutoBling[]> => {
+  const fetchProdutos = async (token: string, pagina: number = 1, idCategoria: string = '10316508', criterio: string = '2'): Promise<ProdutoBling[]> => {
     try {
       const url = new URL('/api/bling/produtos', window.location.origin);
       url.searchParams.append('pagina', pagina.toString());
-      url.searchParams.append('criterio', '2');
-      url.searchParams.append('idCategoria', '10316508');
+      url.searchParams.append('criterio', criterio);
+      url.searchParams.append('idCategoria', idCategoria);
 
       const response = await fetch(url, {
         headers: {
@@ -127,11 +128,119 @@ export const useBling = () => {
     }
   };
 
+  const fetchMalhas = async (token: string, pagina: number = 1): Promise<ProdutoBling[]> => {
+    return fetchProdutos(token, pagina, '10316610', '1');
+  };
+
+  const fetchRibanas = async (token: string, pagina: number = 1): Promise<ProdutoBling[]> => {
+    return fetchProdutos(token, pagina, '10319873', '1');
+  };
+
+  const sincronizarMalhas = async (token: string) => {
+    setLoadingMalha(true);
+    setError(null);
+    try {
+      let todasMalhas: ProdutoBling[] = [];
+      let pagina = 1;
+      let temMaisPaginas = true;
+
+      while (temMaisPaginas) {
+        const malhas = await fetchMalhas(token, pagina);
+        if (malhas.length === 0) {
+          temMaisPaginas = false;
+        } else {
+          todasMalhas = [...todasMalhas, ...malhas];
+          pagina++;
+        }
+      }
+
+      const malhasRef = ref(database, 'malhas');
+      await set(malhasRef, todasMalhas);
+
+      return todasMalhas;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao sincronizar malhas';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoadingMalha(false);
+    }
+  };
+
+  const sincronizarRibanas = async (token: string) => {
+    setLoadingRibana(true);
+    setError(null);
+    try {
+      let todasRibanas: ProdutoBling[] = [];
+      let pagina = 1;
+      let temMaisPaginas = true;
+
+      while (temMaisPaginas) {
+        const ribanas = await fetchRibanas(token, pagina);
+        if (ribanas.length === 0) {
+          temMaisPaginas = false;
+        } else {
+          todasRibanas = [...todasRibanas, ...ribanas];
+          pagina++;
+        }
+      }
+
+      const ribanasRef = ref(database, 'ribanas');
+      await set(ribanasRef, todasRibanas);
+
+      return todasRibanas;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao sincronizar ribanas';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoadingRibana(false);
+    }
+  };
+
+  const getMalhas = async (): Promise<ProdutoBling[]> => {
+    try {
+      const malhasRef = ref(database, 'malhas');
+      const snapshot = await get(malhasRef);
+      
+      if (snapshot.exists()) {
+        return snapshot.val();
+      }
+      return [];
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar malhas';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const getRibanas = async (): Promise<ProdutoBling[]> => {
+    try {
+      const ribanasRef = ref(database, 'ribanas');
+      const snapshot = await get(ribanasRef);
+      
+      if (snapshot.exists()) {
+        return snapshot.val();
+      }
+      return [];
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar ribanas';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
   return {
     loading,
+    loadingMalha,
+    loadingRibana,
     error,
     sincronizarProdutos,
+    sincronizarMalhas,
+    sincronizarRibanas,
     getProdutos,
+    getMalhas,
+    getRibanas,
     atualizarToken,
   };
 };

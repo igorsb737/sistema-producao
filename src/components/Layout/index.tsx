@@ -10,7 +10,7 @@ const Layout = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'Ordens de Produção', icon: <Assignment />, path: '/ordens' },
-    { text: 'Produtos', icon: <Inventory />, path: '/produtos' },
+    { text: 'Registros', icon: <Inventory />, path: '/registros' },
     { text: 'Configurações', icon: <Settings />, path: '/configuracoes' },
   ];
 

@@ -25,7 +25,7 @@ const OrdemProducaoPage = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, mt: 3 }}>
         <Typography variant="h4">
           Ordens de Produção
         </Typography>

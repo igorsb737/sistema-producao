@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useMalhas } from '../../hooks/useMalhas';
+import { useRibanas } from '../../hooks/useRibanas';
+import { useProdutos } from '../../hooks/useProdutos';
 import { useNavigate } from 'react-router-dom';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
 import {
@@ -25,25 +28,33 @@ interface Grade {
   entregas: number[];
 }
 
+interface ItemSelecionado {
+  id: string;
+  nome: string;
+  codigo?: string;
+  descricaoCurta?: string;
+}
+
 const NovaOrdemProducao = () => {
   const [dataInicio] = useState(dayjs());
   const [dataEntrega, setDataEntrega] = useState<dayjs.Dayjs | null>(null);
   const [cliente, setCliente] = useState('');
-  const [item, setItem] = useState('');
-  const [malha, setMalha] = useState('');
-  const [ribana, setRibana] = useState('');
+  const [itemSelecionado, setItemSelecionado] = useState<ItemSelecionado | null>(null);
+  const [malhaSelecionada, setMalhaSelecionada] = useState<ItemSelecionado | null>(null);
+  const [ribanaSelecionada, setRibanaSelecionada] = useState<ItemSelecionado | null>(null);
   const [grades, setGrades] = useState<Grade[]>([]);
 
-  // Mock data - depois será substituído por dados do Firebase
-  const itens = ['Camiseta Básica', 'Camiseta Polo', 'Regata'];
-  const malhas = ['Malha 30.1', 'Malha 40.1', 'Malha PV'];
-  const ribanas = ['Ribana 1x1', 'Ribana 2x2'];
+  const { produtos, loading: loadingProdutos, error: errorProdutos } = useProdutos();
+  const { malhas, loading: loadingMalhas, error: errorMalhas } = useMalhas();
+  const { ribanas, loading: loadingRibanas, error: errorRibanas } = useRibanas();
   const tamanhos = ['P', 'M', 'G', 'GG', 'XG', 'XGG'];
   const cores = ['Preto', 'Branco', 'Azul', 'Vermelho'];
 
   const adicionarGrade = () => {
+    if (!itemSelecionado) return;
+    
     const novaGrade: Grade = {
-      codigo: `${item}-${grades.length + 1}`,
+      codigo: `${itemSelecionado.nome}-${grades.length + 1}`,
       tamanho: '',
       cor: '',
       quantidade: 0,
@@ -57,7 +68,7 @@ const NovaOrdemProducao = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dataEntrega || !cliente || !item || !malha || !ribana || grades.length === 0) {
+    if (!dataEntrega || !cliente || !itemSelecionado || !malhaSelecionada || !ribanaSelecionada || grades.length === 0) {
       alert('Por favor, preencha todos os campos obrigatórios');
       return;
     }
@@ -67,9 +78,9 @@ const NovaOrdemProducao = () => {
         dataInicio: dataInicio.format('DD-MM-YYYY'),
         dataEntrega: dataEntrega.format('DD-MM-YYYY'),
         cliente,
-        item,
-        malha,
-        ribana,
+        item: itemSelecionado.nome,
+        malha: malhaSelecionada.nome,
+        ribana: ribanaSelecionada.nome,
         grades,
         status: 'Aberta',
         totalCamisetas: grades.reduce((total, grade) => total + grade.quantidade, 0),
@@ -84,7 +95,7 @@ const NovaOrdemProducao = () => {
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, mt: 3 }}>
         <Typography variant="h4">Nova Ordem de Produção</Typography>
         <Button type="submit" variant="contained" color="primary">
           Salvar Ordem
@@ -130,31 +141,88 @@ const NovaOrdemProducao = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <Autocomplete
-              options={itens}
-              value={item}
-              onChange={(_, newValue) => setItem(newValue || '')}
+              options={produtos}
+              value={itemSelecionado}
+              onChange={(_, newValue) => setItemSelecionado(newValue)}
+              loading={loadingProdutos}
+              getOptionLabel={(option) => option.nome}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, { inputValue }) => {
+                if (!inputValue) return options;
+                
+                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                
+                return options.filter(option => {
+                  const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                  return terms.every(term => searchText.includes(term));
+                });
+              }}
               renderInput={(params) => (
-                <TextField {...params} label="Item" fullWidth />
+                <TextField 
+                  {...params} 
+                  label="Item" 
+                  fullWidth 
+                  error={!!errorProdutos}
+                  helperText={errorProdutos}
+                />
               )}
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <Autocomplete
               options={malhas}
-              value={malha}
-              onChange={(_, newValue) => setMalha(newValue || '')}
+              value={malhaSelecionada}
+              onChange={(_, newValue) => setMalhaSelecionada(newValue)}
+              loading={loadingMalhas}
+              getOptionLabel={(option) => option.nome}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, { inputValue }) => {
+                if (!inputValue) return options;
+                
+                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                
+                return options.filter(option => {
+                  const searchText = option.nome.toLowerCase();
+                  return terms.every(term => searchText.includes(term));
+                });
+              }}
               renderInput={(params) => (
-                <TextField {...params} label="Malha" fullWidth />
+                <TextField 
+                  {...params} 
+                  label="Malha" 
+                  fullWidth 
+                  error={!!errorMalhas}
+                  helperText={errorMalhas}
+                />
               )}
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <Autocomplete
               options={ribanas}
-              value={ribana}
-              onChange={(_, newValue) => setRibana(newValue || '')}
+              value={ribanaSelecionada}
+              onChange={(_, newValue) => setRibanaSelecionada(newValue)}
+              loading={loadingRibanas}
+              getOptionLabel={(option) => option.nome}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, { inputValue }) => {
+                if (!inputValue) return options;
+                
+                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                
+                return options.filter(option => {
+                  const searchText = option.nome.toLowerCase();
+                  return terms.every(term => searchText.includes(term));
+                });
+              }}
               renderInput={(params) => (
-                <TextField {...params} label="Ribana" fullWidth />
+                <TextField 
+                  {...params} 
+                  label="Ribana" 
+                  fullWidth 
+                  error={!!errorRibanas}
+                  helperText={errorRibanas}
+                />
               )}
             />
           </Grid>
@@ -167,14 +235,14 @@ const NovaOrdemProducao = () => {
           <Button
             variant="outlined"
             onClick={adicionarGrade}
-            disabled={!item}
+            disabled={!itemSelecionado}
           >
             Adicionar Grade
           </Button>
         </Box>
 
         {grades.map((grade, index) => (
-          <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+          <Box key={grade.codigo} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={2}>
                 <TextField

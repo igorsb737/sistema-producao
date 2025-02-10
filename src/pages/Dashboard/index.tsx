@@ -10,7 +10,7 @@ const Dashboard = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4 }}>
+      <Typography variant="h4" sx={{ mb: 4, mt: 3 }}>
         Dashboard
       </Typography>
       
