@@ -38,6 +38,7 @@ interface ItemSelecionado {
 const NovaOrdemProducao = () => {
   const [dataInicio] = useState(dayjs());
   const [dataEntrega, setDataEntrega] = useState<dayjs.Dayjs | null>(null);
+  const [dataFechamento, setDataFechamento] = useState<dayjs.Dayjs | null>(null);
   const [cliente, setCliente] = useState('');
   const [itemSelecionado, setItemSelecionado] = useState<ItemSelecionado | null>(null);
   const [malhaSelecionada, setMalhaSelecionada] = useState<ItemSelecionado | null>(null);
@@ -77,6 +78,7 @@ const NovaOrdemProducao = () => {
       await criarOrdem({
         dataInicio: dataInicio.format('DD-MM-YYYY'),
         dataEntrega: dataEntrega.format('DD-MM-YYYY'),
+        dataFechamento: dataFechamento ? dataFechamento.format('DD-MM-YYYY') : undefined,
         cliente,
         item: itemSelecionado.nome,
         malha: malhaSelecionada.nome,
@@ -120,6 +122,21 @@ const NovaOrdemProducao = () => {
               label="Data de Entrega"
               value={dataEntrega}
               onChange={setDataEntrega}
+              slotProps={{ 
+                textField: { 
+                  fullWidth: true,
+                  InputLabelProps: {
+                    shrink: true
+                  }
+                } 
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <DatePicker
+              label="Data de Fechamento"
+              value={dataFechamento}
+              onChange={setDataFechamento}
               slotProps={{ 
                 textField: { 
                   fullWidth: true,
