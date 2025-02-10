@@ -12,6 +12,8 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { useBling } from '../../hooks/useBling';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -22,9 +24,42 @@ interface Produto {
   codigo: string;
   preco: number;
   situacao: string;
+  idProdutoPai?: string;
+}
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
 }
 
 export const Registros = () => {
+  const [currentTab, setCurrentTab] = useState(0);
+
+  const handleChangeTab = (event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+  };
+
   const { 
     loading, 
     loadingMalha,
@@ -45,6 +80,7 @@ export const Registros = () => {
   const [sincronizando, setSincronizando] = useState(false);
   const [sincronizandoMalha, setSincronizandoMalha] = useState(false);
   const [sincronizandoRibana, setSincronizandoRibana] = useState(false);
+
   const carregarDados = async () => {
     try {
       const [produtosData, malhasData, ribanasData] = await Promise.all([
@@ -114,11 +150,6 @@ export const Registros = () => {
     minWidth: 650
   };
 
-  const cellStyle = {
-    padding: '16px',
-    fontSize: '14px'
-  };
-
   const nameCellStyle = {
     padding: '16px',
     fontSize: '14px',
@@ -136,169 +167,188 @@ export const Registros = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 3, mt: 3 }}>Registros</Typography>
+      <Box sx={{ mb: 3, mt: 3 }}>
+        <Typography variant="h4" sx={{ mb: 2 }}>Registros</Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>Produtos</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<SyncIcon />}
-            onClick={handleSincronizar}
-            disabled={sincronizando}
-          >
-            {sincronizando ? 'Sincronizando...' : 'Sincronizar Produtos'}
-          </Button>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={currentTab} onChange={handleChangeTab}>
+            <Tab label="Produtos" />
+            <Tab label="Malhas" />
+            <Tab label="Ribanas" />
+          </Tabs>
         </Box>
-        <Paper>
-          <TableContainer sx={tableContainerStyle}>
-            <Table sx={tableStyle}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={otherCellStyle}>ID</TableCell>
-                  <TableCell sx={otherCellStyle}>Código</TableCell>
-                  <TableCell sx={nameCellStyle}>Nome</TableCell>
-                  <TableCell sx={otherCellStyle}>Situação</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <CircularProgress />
-                    </TableCell>
-                  </TableRow>
-                ) : produtos.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      Nenhum produto encontrado
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  produtos.map((produto) => (
-                    <TableRow key={produto.id}>
-                      <TableCell sx={otherCellStyle}>{produto.id}</TableCell>
-                      <TableCell sx={otherCellStyle}>{produto.codigo}</TableCell>
-                      <TableCell sx={nameCellStyle}>{produto.nome}</TableCell>
-                      <TableCell sx={otherCellStyle}>{produto.situacao}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
       </Box>
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>Malhas</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<SyncIcon />}
-            onClick={handleSincronizarMalha}
-            disabled={sincronizandoMalha}
-          >
-            {sincronizandoMalha ? 'Sincronizando...' : 'Sincronizar Malhas'}
-          </Button>
-        </Box>
-        <Paper>
-          <TableContainer sx={tableContainerStyle}>
-            <Table sx={tableStyle}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={otherCellStyle}>ID</TableCell>
-                  <TableCell sx={otherCellStyle}>Código</TableCell>
-                  <TableCell sx={nameCellStyle}>Nome</TableCell>
-                  <TableCell sx={otherCellStyle}>Situação</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loadingMalha ? (
+      <TabPanel value={currentTab} index={0}>
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<SyncIcon />}
+              onClick={handleSincronizar}
+              disabled={sincronizando}
+            >
+              {sincronizando ? 'Sincronizando...' : 'Sincronizar Produtos'}
+            </Button>
+          </Box>
+          <Paper>
+            <TableContainer sx={tableContainerStyle}>
+              <Table sx={tableStyle}>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <CircularProgress />
-                    </TableCell>
+                    <TableCell sx={otherCellStyle}>ID</TableCell>
+                    <TableCell sx={otherCellStyle}>Código</TableCell>
+                    <TableCell sx={nameCellStyle}>Nome</TableCell>
+                    <TableCell sx={otherCellStyle}>ID Produto Pai</TableCell>
+                    <TableCell sx={otherCellStyle}>Situação</TableCell>
                   </TableRow>
-                ) : malhas.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      Nenhuma malha encontrada
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  malhas.map((malha) => (
-                    <TableRow key={malha.id}>
-                      <TableCell sx={otherCellStyle}>{malha.id}</TableCell>
-                      <TableCell sx={otherCellStyle}>{malha.codigo}</TableCell>
-                      <TableCell sx={nameCellStyle}>{malha.nome}</TableCell>
-                      <TableCell sx={otherCellStyle}>{malha.situacao}</TableCell>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </Box>
+                  ) : produtos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        Nenhum produto encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    produtos.map((produto) => (
+                      <TableRow key={produto.id}>
+                        <TableCell sx={otherCellStyle}>{produto.id}</TableCell>
+                        <TableCell sx={otherCellStyle}>{produto.codigo}</TableCell>
+                        <TableCell sx={nameCellStyle}>{produto.nome}</TableCell>
+                        <TableCell sx={otherCellStyle}>{produto.idProdutoPai || "-"}</TableCell>
+                        <TableCell sx={otherCellStyle}>{produto.situacao}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+      </TabPanel>
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>Ribanas</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<SyncIcon />}
-            onClick={handleSincronizarRibana}
-            disabled={sincronizandoRibana}
-          >
-            {sincronizandoRibana ? 'Sincronizando...' : 'Sincronizar Ribanas'}
-          </Button>
-        </Box>
-        <Paper>
-          <TableContainer sx={tableContainerStyle}>
-            <Table sx={tableStyle}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={otherCellStyle}>ID</TableCell>
-                  <TableCell sx={otherCellStyle}>Código</TableCell>
-                  <TableCell sx={nameCellStyle}>Nome</TableCell>
-                  <TableCell sx={otherCellStyle}>Situação</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loadingRibana ? (
+      <TabPanel value={currentTab} index={1}>
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<SyncIcon />}
+              onClick={handleSincronizarMalha}
+              disabled={sincronizandoMalha}
+            >
+              {sincronizandoMalha ? 'Sincronizando...' : 'Sincronizar Malhas'}
+            </Button>
+          </Box>
+          <Paper>
+            <TableContainer sx={tableContainerStyle}>
+              <Table sx={tableStyle}>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <CircularProgress />
-                    </TableCell>
+                    <TableCell sx={otherCellStyle}>ID</TableCell>
+                    <TableCell sx={otherCellStyle}>Código</TableCell>
+                    <TableCell sx={nameCellStyle}>Nome</TableCell>
+                    <TableCell sx={otherCellStyle}>ID Produto Pai</TableCell>
+                    <TableCell sx={otherCellStyle}>Situação</TableCell>
                   </TableRow>
-                ) : ribanas.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      Nenhuma ribana encontrada
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  ribanas.map((ribana) => (
-                    <TableRow key={ribana.id}>
-                      <TableCell sx={otherCellStyle}>{ribana.id}</TableCell>
-                      <TableCell sx={otherCellStyle}>{ribana.codigo}</TableCell>
-                      <TableCell sx={nameCellStyle}>{ribana.nome}</TableCell>
-                      <TableCell sx={otherCellStyle}>{ribana.situacao}</TableCell>
+                </TableHead>
+                <TableBody>
+                  {loadingMalha ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </Box>
+                  ) : malhas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        Nenhuma malha encontrada
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    malhas.map((malha) => (
+                      <TableRow key={malha.id}>
+                        <TableCell sx={otherCellStyle}>{malha.id}</TableCell>
+                        <TableCell sx={otherCellStyle}>{malha.codigo}</TableCell>
+                        <TableCell sx={nameCellStyle}>{malha.nome}</TableCell>
+                        <TableCell sx={otherCellStyle}>{malha.idProdutoPai || "-"}</TableCell>
+                        <TableCell sx={otherCellStyle}>{malha.situacao}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={currentTab} index={2}>
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<SyncIcon />}
+              onClick={handleSincronizarRibana}
+              disabled={sincronizandoRibana}
+            >
+              {sincronizandoRibana ? 'Sincronizando...' : 'Sincronizar Ribanas'}
+            </Button>
+          </Box>
+          <Paper>
+            <TableContainer sx={tableContainerStyle}>
+              <Table sx={tableStyle}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={otherCellStyle}>ID</TableCell>
+                    <TableCell sx={otherCellStyle}>Código</TableCell>
+                    <TableCell sx={nameCellStyle}>Nome</TableCell>
+                    <TableCell sx={otherCellStyle}>ID Produto Pai</TableCell>
+                    <TableCell sx={otherCellStyle}>Situação</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loadingRibana ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
+                      </TableCell>
+                    </TableRow>
+                  ) : ribanas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        Nenhuma ribana encontrada
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    ribanas.map((ribana) => (
+                      <TableRow key={ribana.id}>
+                        <TableCell sx={otherCellStyle}>{ribana.id}</TableCell>
+                        <TableCell sx={otherCellStyle}>{ribana.codigo}</TableCell>
+                        <TableCell sx={nameCellStyle}>{ribana.nome}</TableCell>
+                        <TableCell sx={otherCellStyle}>{ribana.idProdutoPai || "-"}</TableCell>
+                        <TableCell sx={otherCellStyle}>{ribana.situacao}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+      </TabPanel>
     </Box>
   );
 };

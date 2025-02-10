@@ -262,11 +262,15 @@ const NovaOrdemProducao = () => {
                 getOptionLabel={(option) => option.nome}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 filterOptions={(options, { inputValue }) => {
-                  if (!inputValue) return options;
+                  // Filtra apenas itens que contenham a palavra "cor"
+                  const malhasComCor = options.filter(option => 
+                    option.nome.toLowerCase().includes('cor')
+                  );
+                  
+                  if (!inputValue) return malhasComCor;
                   
                   const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                  
-                  return options.filter(option => {
+                  return malhasComCor.filter(option => {
                     const searchText = option.nome.toLowerCase();
                     return terms.every(term => searchText.includes(term));
                   });
@@ -309,11 +313,15 @@ const NovaOrdemProducao = () => {
                 getOptionLabel={(option) => option.nome}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 filterOptions={(options, { inputValue }) => {
-                  if (!inputValue) return options;
+                  // Filtra apenas itens que contenham a palavra "cor"
+                  const ribanasComCor = options.filter(option => 
+                    option.nome.toLowerCase().includes('cor')
+                  );
+                  
+                  if (!inputValue) return ribanasComCor;
                   
                   const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                  
-                  return options.filter(option => {
+                  return ribanasComCor.filter(option => {
                     const searchText = option.nome.toLowerCase();
                     return terms.every(term => searchText.includes(term));
                   });
