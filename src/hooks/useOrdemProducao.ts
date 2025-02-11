@@ -57,31 +57,70 @@ export const useOrdemProducao = () => {
   const [error, setError] = useState<string | null>(null);
 
   const carregarOrdens = async () => {
+    console.log('Iniciando carregamento de ordens...');
     try {
       const ordensRef = ref(database, 'ordens');
+      console.log('Referência do Firebase criada:', ordensRef);
+      
       const snapshot = await get(ordensRef);
+      console.log('Snapshot obtido:', snapshot.exists() ? 'Com dados' : 'Sem dados');
       
       if (snapshot.exists()) {
         const ordensData = snapshot.val();
-        console.log('Dados do Firebase:', ordensData);
+        console.log('Dados brutos do Firebase:', JSON.stringify(ordensData, null, 2));
+        
         const ordensArray = Object.entries(ordensData)
-          .map(([key, value]) => ({
-            ...value as Omit<OrdemProducao, 'id'>,
-            id: key
-          }))
+          .map(([key, value]) => {
+            console.log(`\nProcessando ordem ${key}:`, JSON.stringify(value, null, 2));
+            const ordem = value as Omit<OrdemProducao, 'id'>;
+            
+            if (!ordem.informacoesGerais || !ordem.solicitacao) {
+              console.error(`Ordem ${key} com estrutura inválida:`, ordem);
+              return null;
+            }
+
+            try {
+              const ordemProcessada = {
+                id: key,
+                informacoesGerais: ordem.informacoesGerais,
+                solicitacao: ordem.solicitacao,
+                grades: ordem.grades || {}
+              };
+              console.log(`Ordem ${key} processada com sucesso:`, JSON.stringify(ordemProcessada, null, 2));
+              return ordemProcessada;
+            } catch (processError) {
+              console.error(`Erro ao processar ordem ${key}:`, processError);
+              return null;
+            }
+          })
+          .filter((ordem): ordem is OrdemProducao => ordem !== null)
           .sort((a, b) => {
-            // Converte as datas para timestamp para comparação
-            const dateA = new Date(a.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
-            const dateB = new Date(b.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
-            return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+            try {
+              const dateA = new Date(a.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
+              const dateB = new Date(b.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
+              return dateB - dateA;
+            } catch (sortError) {
+              console.error('Erro ao ordenar:', sortError);
+              return 0;
+            }
           });
-        console.log('Array de ordens mapeado e ordenado:', ordensArray);
+
+        console.log('Array final de ordens:', JSON.stringify(ordensArray, null, 2));
         setOrdens(ordensArray);
       } else {
+        console.log('Nenhuma ordem encontrada no Firebase');
         setOrdens([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar ordens');
+      console.error('Erro ao carregar ordens:', err);
+      if (err instanceof Error) {
+        console.error('Detalhes do erro:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        });
+      }
+      setError(err instanceof Error ? `Erro ao carregar ordens: ${err.message}` : 'Erro ao carregar ordens');
     } finally {
       setLoading(false);
     }
@@ -134,6 +173,7 @@ export const useOrdemProducao = () => {
       await carregarOrdens();
       return novaOrdem;
     } catch (err) {
+      console.error('Erro ao criar ordem:', err);
       setError(err instanceof Error ? err.message : 'Erro ao criar ordem');
       throw err;
     }
@@ -156,6 +196,7 @@ export const useOrdemProducao = () => {
       }
       await carregarOrdens();
     } catch (err) {
+      console.error('Erro ao finalizar ordem:', err);
       setError(err instanceof Error ? err.message : 'Erro ao finalizar ordem');
       throw err;
     }
@@ -182,6 +223,7 @@ export const useOrdemProducao = () => {
       }
       await carregarOrdens();
     } catch (err) {
+      console.error('Erro ao editar ordem:', err);
       setError(err instanceof Error ? err.message : 'Erro ao editar ordem');
       throw err;
     }

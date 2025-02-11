@@ -23,7 +23,7 @@ function VisualizarOrdem() {
     );
   }
 
-  const ordem = ordens.find(o => o.numero === (id || '').padStart(4, '0'));
+  const ordem = ordens.find(o => o.informacoesGerais.numero === (id || '').padStart(4, '0'));
 
   if (!ordem) {
     return (
@@ -34,14 +34,14 @@ function VisualizarOrdem() {
   }
 
   // Se a ordem estiver em rascunho, redireciona para a tela de edição
-  if (ordem.status === 'Rascunho') {
-    return <Navigate to={`/ordens/editar/${ordem.numero}`} replace />;
+  if (ordem.informacoesGerais.status === 'Rascunho') {
+    return <Navigate to={`/ordens/editar/${ordem.informacoesGerais.numero}`} replace />;
   }
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 4 }}>
-        Ordem de Produção #{ordem.numero}
+        Ordem de Produção #{ordem.informacoesGerais.numero}
       </Typography>
 
       <Paper sx={{ p: 3 }}>
@@ -50,7 +50,7 @@ function VisualizarOrdem() {
             <Typography variant="subtitle2" color="text.secondary">
               Cliente
             </Typography>
-            <Typography variant="body1">{ordem.cliente}</Typography>
+            <Typography variant="body1">{ordem.informacoesGerais.cliente}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
@@ -58,8 +58,8 @@ function VisualizarOrdem() {
               Status
             </Typography>
             <Chip 
-              label={ordem.status || "-"}
-              color={ordem.status === 'Aberta' ? 'primary' : ordem.status === 'Finalizado' ? 'success' : 'default'}
+              label={ordem.informacoesGerais.status || "-"}
+              color={ordem.informacoesGerais.status === 'Aberta' ? 'primary' : ordem.informacoesGerais.status === 'Finalizado' ? 'success' : 'default'}
             />
           </Grid>
 
@@ -67,70 +67,72 @@ function VisualizarOrdem() {
             <Typography variant="subtitle2" color="text.secondary">
               Data de Início
             </Typography>
-            <Typography variant="body1">{ordem.dataInicio || "-"}</Typography>
+            <Typography variant="body1">{ordem.informacoesGerais.dataInicio || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Data de Entrega
             </Typography>
-            <Typography variant="body1">{ordem.dataEntrega || "-"}</Typography>
+            <Typography variant="body1">{ordem.informacoesGerais.dataEntrega || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Data de Fechamento
             </Typography>
-            <Typography variant="body1">{ordem.dataFechamento || "-"}</Typography>
+            <Typography variant="body1">{ordem.informacoesGerais.dataFechamento || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Total de Camisetas
             </Typography>
-            <Typography variant="body1">{ordem.totalCamisetas || "-"}</Typography>
+            <Typography variant="body1">{ordem.informacoesGerais.totalCamisetas || "-"}</Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Item
             </Typography>
-            <Typography variant="body1">{ordem.item || "-"}</Typography>
+            <Typography variant="body1">{ordem.solicitacao.item.nome || "-"}</Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Malha
-            </Typography>
-            <Typography variant="body1">{ordem.malha || "-"}</Typography>
+          <Grid container item xs={12} spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Malha
+              </Typography>
+              <Typography variant="body1">{ordem.solicitacao.malha.nome || "-"}</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Previsão Malha
+              </Typography>
+              <Typography variant="body1">{ordem.solicitacao.previsoes.malha || "-"}</Typography>
+            </Grid>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Ribana
-            </Typography>
-            <Typography variant="body1">{ordem.ribana || "-"}</Typography>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Previsão de Malha
-            </Typography>
-            <Typography variant="body1">{ordem.previsaoMalha || "-"}</Typography>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Previsão de Ribana
-            </Typography>
-            <Typography variant="body1">{ordem.previsaoRibana || "-"}</Typography>
+          <Grid container item xs={12} spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Ribana
+              </Typography>
+              <Typography variant="body1">{ordem.solicitacao.ribana.nome || "-"}</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Previsão Ribana
+              </Typography>
+              <Typography variant="body1">{ordem.solicitacao.previsoes.ribana || "-"}</Typography>
+            </Grid>
           </Grid>
 
           <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Observações
             </Typography>
-            <Typography variant="body1">{ordem.observacao || "-"}</Typography>
+            <Typography variant="body1">{ordem.informacoesGerais.observacao || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12}>
@@ -138,14 +140,14 @@ function VisualizarOrdem() {
               Grades
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {ordem.grades.map((grade, index) => (
-                <Paper key={index} variant="outlined" sx={{ p: 2 }}>
+              {Object.entries(ordem.grades).map(([gradeId, grade]) => (
+                <Paper key={gradeId} variant="outlined" sx={{ p: 2 }}>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" color="text.secondary">
                         Item Grade
                       </Typography>
-                      <Typography variant="body1">{grade.codigo || "-"}</Typography>
+                      <Typography variant="body1">{grade.nome || "-"}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" color="text.secondary">

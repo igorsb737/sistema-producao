@@ -33,13 +33,13 @@ function OrdemProducaoPage() {
   const [filtroDataFim, setFiltroDataFim] = useState<Date | null>(null);
 
   const ordensFiltered = ordens.filter((ordem) => {
-    const matchStatus = !filtroStatus || ordem.status === filtroStatus;
-    const matchCliente = !filtroCliente || ordem.cliente.toLowerCase().includes(filtroCliente.toLowerCase());
-    const matchItem = !filtroItem || ordem.item.toLowerCase().includes(filtroItem.toLowerCase());
+    const matchStatus = !filtroStatus || ordem.informacoesGerais.status === filtroStatus;
+    const matchCliente = !filtroCliente || ordem.informacoesGerais.cliente.toLowerCase().includes(filtroCliente.toLowerCase());
+    const matchItem = !filtroItem || ordem.solicitacao.item.nome.toLowerCase().includes(filtroItem.toLowerCase());
     
     let matchData = true;
     if (filtroDataInicio && filtroDataFim) {
-      const dataEntrega = new Date(ordem.dataEntrega.split('-').reverse().join('-'));
+      const dataEntrega = new Date(ordem.informacoesGerais.dataEntrega.split('-').reverse().join('-'));
       matchData = dataEntrega >= filtroDataInicio && dataEntrega <= filtroDataFim;
     }
 
@@ -214,21 +214,21 @@ function OrdemProducaoPage() {
             ) : (
               ordensFiltered.map((ordem) => (
                 <TableRow
-                  key={ordem.numero}
+                  key={ordem.informacoesGerais.numero}
                   hover
-                  onClick={() => navigate(`/ordens/${ordem.numero}`)}
+                  onClick={() => navigate(`/ordens/${ordem.informacoesGerais.numero}`)}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell>{ordem.numero}</TableCell>
-                  <TableCell>{ordem.item}</TableCell>
-                  <TableCell>{ordem.dataInicio}</TableCell>
-                  <TableCell>{ordem.dataEntrega}</TableCell>
-                  <TableCell>{ordem.cliente}</TableCell>
-                  <TableCell>{ordem.totalCamisetas}</TableCell>
+                  <TableCell>{ordem.informacoesGerais.numero}</TableCell>
+                  <TableCell>{ordem.solicitacao.item.nome}</TableCell>
+                  <TableCell>{ordem.informacoesGerais.dataInicio}</TableCell>
+                  <TableCell>{ordem.informacoesGerais.dataEntrega}</TableCell>
+                  <TableCell>{ordem.informacoesGerais.cliente}</TableCell>
+                  <TableCell>{ordem.informacoesGerais.totalCamisetas}</TableCell>
                   <TableCell>
                     <Chip
-                      label={ordem.status}
-                      color={getStatusColor(ordem.status)}
+                      label={ordem.informacoesGerais.status}
+                      color={getStatusColor(ordem.informacoesGerais.status)}
                       size="small"
                     />
                   </TableCell>

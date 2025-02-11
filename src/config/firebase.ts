@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
+import { getDatabase, ref, get, DataSnapshot } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAib5pz5ra0VSaWEQcmILbtTuhy4NXKnBA",
@@ -12,4 +12,20 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const database = getDatabase(app);
+const database = getDatabase(app);
+
+// Verificar conexão com o Firebase
+const connectedRef = ref(database, '.info/connected');
+get(connectedRef)
+  .then((snap: DataSnapshot) => {
+    if (snap.val() === true) {
+      console.log('Conectado ao Firebase Realtime Database');
+    } else {
+      console.log('Não conectado ao Firebase Realtime Database');
+    }
+  })
+  .catch((error: Error) => {
+    console.error('Erro ao verificar conexão com Firebase:', error);
+  });
+
+export { database };
