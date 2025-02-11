@@ -58,7 +58,7 @@ function VisualizarOrdem() {
               Status
             </Typography>
             <Chip 
-              label={ordem.status}
+              label={ordem.status || "-"}
               color={ordem.status === 'Aberta' ? 'primary' : ordem.status === 'Finalizado' ? 'success' : 'default'}
             />
           </Grid>
@@ -67,79 +67,71 @@ function VisualizarOrdem() {
             <Typography variant="subtitle2" color="text.secondary">
               Data de Início
             </Typography>
-            <Typography variant="body1">{ordem.dataInicio}</Typography>
+            <Typography variant="body1">{ordem.dataInicio || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Data de Entrega
             </Typography>
-            <Typography variant="body1">{ordem.dataEntrega}</Typography>
+            <Typography variant="body1">{ordem.dataEntrega || "-"}</Typography>
           </Grid>
 
-          {ordem.dataFechamento && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Data de Fechamento
-              </Typography>
-              <Typography variant="body1">{ordem.dataFechamento}</Typography>
-            </Grid>
-          )}
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Data de Fechamento
+            </Typography>
+            <Typography variant="body1">{ordem.dataFechamento || "-"}</Typography>
+          </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Total de Camisetas
             </Typography>
-            <Typography variant="body1">{ordem.totalCamisetas}</Typography>
+            <Typography variant="body1">{ordem.totalCamisetas || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Item
             </Typography>
-            <Typography variant="body1">{ordem.item}</Typography>
+            <Typography variant="body1">{ordem.item || "-"}</Typography>
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Malha
             </Typography>
-            <Typography variant="body1">{ordem.malha}</Typography>
+            <Typography variant="body1">{ordem.malha || "-"}</Typography>
           </Grid>
-
-          {ordem.consumoMalha && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Consumo de Malha
-              </Typography>
-              <Typography variant="body1">{ordem.consumoMalha}</Typography>
-            </Grid>
-          )}
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Ribana
             </Typography>
-            <Typography variant="body1">{ordem.ribana}</Typography>
+            <Typography variant="body1">{ordem.ribana || "-"}</Typography>
           </Grid>
 
-          {ordem.consumoRibana && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Consumo de Ribana
-              </Typography>
-              <Typography variant="body1">{ordem.consumoRibana}</Typography>
-            </Grid>
-          )}
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Previsão de Malha
+            </Typography>
+            <Typography variant="body1">{ordem.previsaoMalha || "-"}</Typography>
+          </Grid>
 
-          {ordem.observacao && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Observação
-              </Typography>
-              <Typography variant="body1">{ordem.observacao}</Typography>
-            </Grid>
-          )}
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Previsão de Ribana
+            </Typography>
+            <Typography variant="body1">{ordem.previsaoRibana || "-"}</Typography>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Observações
+            </Typography>
+            <Typography variant="body1">{ordem.observacao || "-"}</Typography>
+          </Grid>
 
           <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
@@ -149,27 +141,17 @@ function VisualizarOrdem() {
               {ordem.grades.map((grade, index) => (
                 <Paper key={index} variant="outlined" sx={{ p: 2 }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" color="text.secondary">
-                        Código
+                        Item Grade
                       </Typography>
-                      <Typography variant="body1">{grade.codigo}</Typography>
+                      <Typography variant="body1">{grade.codigo || "-"}</Typography>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" color="text.secondary">
                         Quantidade Prevista
                       </Typography>
-                      <Typography variant="body1">{grade.quantidadePrevista}</Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Entregas
-                      </Typography>
-                      <Typography variant="body1">
-                        {grade.entregas?.length > 0 
-                          ? grade.entregas.join(', ')
-                          : 'Nenhuma entrega registrada'}
-                      </Typography>
+                      <Typography variant="body1">{grade.quantidadePrevista || "-"}</Typography>
                     </Grid>
                   </Grid>
                 </Paper>

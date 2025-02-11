@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 interface Grade {
   codigo: string;
+  produtoId: string;
   quantidadePrevista: number;
   entregas: number[];
 }
@@ -11,22 +12,19 @@ interface Grade {
 export interface OrdemProducao {
   id: string;
   numero: string;
+  cliente: string;
+  dataEntrega: string;
   dataInicio: string;
   dataFechamento?: string;
-  dataEntrega: string;
-  status: 'Rascunho' | 'Aberta' | 'Finalizado';
-  totalCamisetas: number;
-  rendimento?: number;
-  cliente: string;
+  grades: Grade[];
   item: string;
   malha: string;
-  consumoMalha?: number;
-  previsaoMalha?: string;
-  ribana: string;
-  consumoRibana?: number;
-  previsaoRibana?: string;
-  grades: Grade[];
   observacao?: string;
+  previsaoMalha?: string;
+  previsaoRibana?: string;
+  ribana: string;
+  status: 'Rascunho' | 'Aberta' | 'Finalizado';
+  totalCamisetas: number;
 }
 
 export const useOrdemProducao = () => {
