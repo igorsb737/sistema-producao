@@ -5,26 +5,50 @@ import { useState, useEffect } from 'react';
 interface Grade {
   codigo: string;
   produtoId: string;
+  nome: string;
   quantidadePrevista: number;
   entregas: number[];
 }
 
-export interface OrdemProducao {
-  id: string;
+interface Grades {
+  [key: string]: Grade;
+}
+
+interface Item {
+  nome: string;
+  produtoId: string;
+}
+
+interface Previsoes {
+  malha: string;
+  ribana: string;
+}
+
+interface Solicitacao {
+  item: Item;
+  malha: Item;
+  ribana: Item;
+  previsoes: Previsoes;
+}
+
+interface InformacoesGerais {
   numero: string;
   cliente: string;
   dataEntrega: string;
   dataInicio: string;
   dataFechamento?: string;
-  grades: Grade[];
-  item: string;
-  malha: string;
+  status: Status;
   observacao?: string;
-  previsaoMalha?: string;
-  previsaoRibana?: string;
-  ribana: string;
-  status: 'Rascunho' | 'Aberta' | 'Finalizado';
   totalCamisetas: number;
+}
+
+export type Status = 'Rascunho' | 'Aberta' | 'Finalizado';
+
+export interface OrdemProducao {
+  id: string;
+  informacoesGerais: InformacoesGerais;
+  solicitacao: Solicitacao;
+  grades: Grades;
 }
 
 export const useOrdemProducao = () => {
@@ -47,8 +71,8 @@ export const useOrdemProducao = () => {
           }))
           .sort((a, b) => {
             // Converte as datas para timestamp para comparação
-            const dateA = new Date(a.dataInicio.split('-').reverse().join('-')).getTime();
-            const dateB = new Date(b.dataInicio.split('-').reverse().join('-')).getTime();
+            const dateA = new Date(a.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
+            const dateB = new Date(b.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
             return dateB - dateA; // Ordem decrescente (mais recente primeiro)
           });
         console.log('Array de ordens mapeado e ordenado:', ordensArray);
@@ -63,7 +87,20 @@ export const useOrdemProducao = () => {
     }
   };
 
-  const criarOrdem = async (ordem: Omit<OrdemProducao, 'numero'>) => {
+  interface CriarOrdemInput {
+    informacoesGerais: {
+      cliente: string;
+      dataInicio: string;
+      dataEntrega: string;
+      status: Status;
+      observacao?: string;
+      totalCamisetas: number;
+    };
+    solicitacao: Solicitacao;
+    grades: Grades;
+  }
+
+  const criarOrdem = async (ordem: CriarOrdemInput) => {
     try {
       // Buscar o próximo número da sequência
       const configRef = ref(database, 'config/numeroSequencial');
@@ -77,17 +114,24 @@ export const useOrdemProducao = () => {
       // Criar a ordem com o número sequencial
       const ordensRef = ref(database, 'ordens');
       const novaOrdemRef = push(ordensRef);
-      
+
       const novaOrdem: OrdemProducao = {
-        ...ordem,
-        numero: proximoNumero.toString().padStart(4, '0'),
-        status: ordem.status || 'Aberta',
-        totalCamisetas: ordem.grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
+        id: novaOrdemRef.key || '',
+        informacoesGerais: {
+          ...ordem.informacoesGerais,
+          numero: proximoNumero.toString().padStart(4, '0'),
+        },
+        solicitacao: ordem.solicitacao,
+        grades: ordem.grades
       };
 
-      await set(novaOrdemRef, novaOrdem);
-      await carregarOrdens();
+      await set(novaOrdemRef, {
+        informacoesGerais: novaOrdem.informacoesGerais,
+        solicitacao: novaOrdem.solicitacao,
+        grades: novaOrdem.grades
+      });
       
+      await carregarOrdens();
       return novaOrdem;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar ordem');
@@ -103,8 +147,11 @@ export const useOrdemProducao = () => {
         const ordemAtual = snapshot.val();
         await set(ordemRef, {
           ...ordemAtual,
-          status: 'Finalizado',
-          dataFechamento: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+          informacoesGerais: {
+            ...ordemAtual.informacoesGerais,
+            status: 'Finalizado' as Status,
+            dataFechamento: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+          }
         });
       }
       await carregarOrdens();
@@ -118,15 +165,19 @@ export const useOrdemProducao = () => {
     carregarOrdens();
   }, []);
 
-  const editarOrdem = async (id: string, ordem: Omit<OrdemProducao, 'numero'>) => {
+  const editarOrdem = async (id: string, ordem: CriarOrdemInput) => {
     try {
       const ordemRef = ref(database, `ordens/${id}`);
       const snapshot = await get(ordemRef);
       if (snapshot.exists()) {
         const ordemAtual = snapshot.val();
         await set(ordemRef, {
-          ...ordem,
-          numero: ordemAtual.numero,
+          informacoesGerais: {
+            ...ordem.informacoesGerais,
+            numero: ordemAtual.informacoesGerais.numero,
+          },
+          solicitacao: ordem.solicitacao,
+          grades: ordem.grades
         });
       }
       await carregarOrdens();

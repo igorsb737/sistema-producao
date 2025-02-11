@@ -3,7 +3,7 @@ import { useMalhas } from '../../hooks/useMalhas';
 import { useRibanas } from '../../hooks/useRibanas';
 import { useProdutos } from '../../hooks/useProdutos';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { useOrdemProducao, type Status } from '../../hooks/useOrdemProducao';
 import {
   Box,
   Typography,
@@ -12,10 +12,6 @@ import {
   TextField,
   Button,
   Autocomplete,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -26,9 +22,14 @@ import dayjs from 'dayjs';
 
 interface Grade {
   codigo: string;
-  produtoId?: string;
+  produtoId: string;
+  nome: string;
   quantidadePrevista: number;
   entregas: number[];
+}
+
+interface Grades {
+  [key: string]: Grade;
 }
 
 interface ItemSelecionado {
@@ -48,17 +49,17 @@ const NovaOrdemProducao = () => {
   const [itemSelecionado, setItemSelecionado] = useState<ItemSelecionado | null>(null);
   const [malhaSelecionada, setMalhaSelecionada] = useState<ItemSelecionado | null>(null);
   const [ribanaSelecionada, setRibanaSelecionada] = useState<ItemSelecionado | null>(null);
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const [grades, setGrades] = useState<Grades>({});
   const [previsaoMalha, setPrevisaoMalha] = useState('');
   const [previsaoRibana, setPrevisaoRibana] = useState('');
   const [observacao, setObservacao] = useState('');
-  const [dialogoRemocao, setDialogoRemocao] = useState<{aberto: boolean; indice: number | null}>({
+  const [dialogoRemocao, setDialogoRemocao] = useState<{aberto: boolean; gradeId: string | null}>({
     aberto: false,
-    indice: null
+    gradeId: null
   });
 
   const totalPrevisto = useMemo(() => {
-    return grades.reduce((total, grade) => total + grade.quantidadePrevista, 0);
+    return Object.values(grades).reduce((total, grade) => total + grade.quantidadePrevista, 0);
   }, [grades]);
 
   const rendimentoPrevisto = useMemo(() => {
@@ -74,39 +75,37 @@ const NovaOrdemProducao = () => {
   // Carrega os dados da ordem existente
   useEffect(() => {
     if (id) {
-      const ordem = ordens.find(o => o.numero === id.padStart(4, '0'));
+      const ordem = ordens.find(o => o.informacoesGerais.numero === id.padStart(4, '0'));
       if (ordem) {
-        setDataInicio(dayjs(ordem.dataInicio, 'DD-MM-YYYY'));
-        if (ordem.dataEntrega) {
-          setDataEntrega(dayjs(ordem.dataEntrega, 'DD-MM-YYYY'));
+        setDataInicio(dayjs(ordem.informacoesGerais.dataInicio, 'DD-MM-YYYY'));
+        setDataEntrega(dayjs(ordem.informacoesGerais.dataEntrega, 'DD-MM-YYYY'));
+        if (ordem.informacoesGerais.dataFechamento) {
+          setDataFechamento(dayjs(ordem.informacoesGerais.dataFechamento, 'DD-MM-YYYY'));
         }
-        if (ordem.dataFechamento) {
-          setDataFechamento(dayjs(ordem.dataFechamento, 'DD-MM-YYYY'));
-        }
-        setCliente(ordem.cliente || '');
+        setCliente(ordem.informacoesGerais.cliente || '');
         
         // Encontra o item nos produtos
-        const item = produtos.find(p => p.nome === ordem.item);
+        const item = produtos.find(p => p.nome === ordem.solicitacao.item.nome);
         if (item) {
           setItemSelecionado(item);
         }
 
         // Encontra a malha
-        const malha = malhas.find(m => m.nome === ordem.malha);
+        const malha = malhas.find(m => m.nome === ordem.solicitacao.malha.nome);
         if (malha) {
           setMalhaSelecionada(malha);
         }
 
         // Encontra a ribana
-        const ribana = ribanas.find(r => r.nome === ordem.ribana);
+        const ribana = ribanas.find(r => r.nome === ordem.solicitacao.ribana.nome);
         if (ribana) {
           setRibanaSelecionada(ribana);
         }
 
-        setPrevisaoMalha(ordem.previsaoMalha || '');
-        setPrevisaoRibana(ordem.previsaoRibana || '');
-        setGrades(ordem.grades || []);
-        setObservacao(ordem.observacao || '');
+        setPrevisaoMalha(ordem.solicitacao.previsoes.malha || '');
+        setPrevisaoRibana(ordem.solicitacao.previsoes.ribana || '');
+        setGrades(ordem.grades || {});
+        setObservacao(ordem.informacoesGerais.observacao || '');
       }
     }
   }, [id, ordens, produtos, malhas, ribanas]);
@@ -114,13 +113,19 @@ const NovaOrdemProducao = () => {
   const adicionarGrade = () => {
     if (!itemSelecionado) return;
     
+    const gradeId = `grade_${Date.now()}`;
     const novaGrade: Grade = {
       codigo: '',
       produtoId: '',
+      nome: '',
       quantidadePrevista: 0,
       entregas: [],
     };
-    setGrades([...grades, novaGrade]);
+    
+    setGrades(prevGrades => ({
+      ...prevGrades,
+      [gradeId]: novaGrade
+    }));
   };
 
   const navigate = useNavigate();
@@ -131,27 +136,42 @@ const NovaOrdemProducao = () => {
     // Para rascunho, permite salvar sem validações
     if (isRascunho) {
       try {
-        const ordemData: any = {
-          dataInicio: dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY'),
-          dataEntrega: dataEntrega ? dataEntrega.format('DD-MM-YYYY') : (dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY')),
-          cliente: cliente || '',
-          item: itemSelecionado?.nome || '',
-          malha: malhaSelecionada?.nome || '',
-          ribana: ribanaSelecionada?.nome || '',
-          previsaoMalha: previsaoMalha || '',
-          previsaoRibana: previsaoRibana || '',
-          grades: grades || [],
-          status: 'Rascunho',
-          totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
-          observacao: observacao || ''
+        const dataInicioFormatted = dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY');
+        const dataEntregaFormatted = dataEntrega ? dataEntrega.format('DD-MM-YYYY') : dataInicioFormatted;
+        const totalCamisetas = Object.values(grades).reduce((total, grade) => total + grade.quantidadePrevista, 0);
+        
+        const ordemData = {
+          informacoesGerais: {
+            cliente: cliente || '',
+            dataInicio: dataInicioFormatted,
+            dataEntrega: dataEntregaFormatted,
+            status: 'Rascunho' as Status,
+            observacao: observacao || '',
+            totalCamisetas
+          },
+          solicitacao: {
+            item: {
+              nome: itemSelecionado?.nome || '',
+              produtoId: itemSelecionado?.id || ''
+            },
+            malha: {
+              nome: malhaSelecionada?.nome || '',
+              produtoId: malhaSelecionada?.id || ''
+            },
+            ribana: {
+              nome: ribanaSelecionada?.nome || '',
+              produtoId: ribanaSelecionada?.id || ''
+            },
+            previsoes: {
+              malha: previsaoMalha || '',
+              ribana: previsaoRibana || ''
+            }
+          },
+          grades
         };
 
-        if (dataFechamento) {
-          ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
-        }
-
         if (id) {
-          const ordem = ordens.find(o => o.numero === id.padStart(4, '0'));
+          const ordem = ordens.find(o => o.informacoesGerais.numero === id.padStart(4, '0'));
           if (ordem) {
             await editarOrdem(ordem.id, ordemData);
           }
@@ -196,10 +216,10 @@ const NovaOrdemProducao = () => {
     }
 
     // Validação das grades
-    if (grades.length === 0) {
+    if (Object.keys(grades).length === 0) {
       erros.push('É necessário adicionar pelo menos uma grade de produção');
     } else {
-      const gradesInvalidas = grades.some(grade => !grade.codigo || !grade.quantidadePrevista);
+      const gradesInvalidas = Object.values(grades).some(grade => !grade.codigo || !grade.quantidadePrevista);
       if (gradesInvalidas) {
         erros.push('Todas as grades devem ter um item e quantidade prevista preenchidos');
       }
@@ -216,27 +236,42 @@ const NovaOrdemProducao = () => {
         throw new Error('Valores obrigatórios não preenchidos');
       }
 
-      const ordemData: any = {
-        dataInicio: dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY'),
-        dataEntrega: dataEntrega.format('DD-MM-YYYY'),
-        cliente,
-        item: itemSelecionado.nome,
-        malha: malhaSelecionada.nome,
-        ribana: ribanaSelecionada.nome,
-        previsaoMalha,
-        previsaoRibana,
-        grades,
-        status: isRascunho ? 'Rascunho' : 'Aberta',
-        totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
-        observacao
+      const dataInicioFormatted = dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY');
+      const dataEntregaFormatted = dataEntrega?.format('DD-MM-YYYY') || dataInicioFormatted;
+      const totalCamisetas = Object.values(grades).reduce((total, grade) => total + grade.quantidadePrevista, 0);
+      
+      const ordemData = {
+        informacoesGerais: {
+          cliente: cliente || '',
+          dataInicio: dataInicioFormatted,
+          dataEntrega: dataEntregaFormatted,
+            status: (isRascunho ? 'Rascunho' : 'Aberta') as Status,
+          observacao: observacao || '',
+          totalCamisetas
+        },
+        solicitacao: {
+          item: {
+            nome: itemSelecionado.nome,
+            produtoId: itemSelecionado.id
+          },
+          malha: {
+            nome: malhaSelecionada.nome,
+            produtoId: malhaSelecionada.id
+          },
+          ribana: {
+            nome: ribanaSelecionada.nome,
+            produtoId: ribanaSelecionada.id
+          },
+          previsoes: {
+            malha: previsaoMalha,
+            ribana: previsaoRibana
+          }
+        },
+        grades
       };
 
-      if (dataFechamento) {
-        ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
-      }
-
       if (id) {
-        const ordem = ordens.find(o => o.numero === id.padStart(4, '0'));
+        const ordem = ordens.find(o => o.informacoesGerais.numero === id.padStart(4, '0'));
         if (ordem) {
           await editarOrdem(ordem.id, ordemData);
         }
@@ -365,45 +400,45 @@ const NovaOrdemProducao = () => {
           <Grid item container xs={12} spacing={2}>
             <Grid item xs={9}>
               <Autocomplete
-              options={produtos}
-              value={itemSelecionado}
-              onChange={(_, newValue) => {
-                console.log('Novo item selecionado:', newValue);
-                setItemSelecionado(newValue);
-                // Limpa as grades quando muda o item principal
-                setGrades([]);
-              }}
-              loading={loadingProdutos}
-              getOptionLabel={(option) => option.nome}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              filterOptions={(options, { inputValue }) => {
-                // Filtra produtos que são pais (sem idProdutoPai) e não têm TAMANHO no nome
-                const produtosFiltrados = options.filter(option => 
-                  !option.idProdutoPai && !option.nome.includes('TAMANHO:')
-                );
-                
-                if (!inputValue) return produtosFiltrados;
-                
-                const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                return produtosFiltrados.filter(option => {
-                  const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
-                  return terms.every(term => searchText.includes(term));
-                });
-              }}
-              renderInput={(params: any) => (
-                <TextField 
-                  {...params} 
-                  label="Item" 
-                  fullWidth 
-                  size="small"
-                  error={!!errorProdutos}
-                      helperText={errorProdutos || "Somente itens relacionados ao item principal podem ser selecionados"}
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                />
-              )}
-            />
+                options={produtos}
+                value={itemSelecionado}
+                onChange={(_, newValue) => {
+                  console.log('Novo item selecionado:', newValue);
+                  setItemSelecionado(newValue);
+                  // Limpa as grades quando muda o item principal
+                  setGrades({});
+                }}
+                loading={loadingProdutos}
+                getOptionLabel={(option) => option.nome}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                filterOptions={(options, { inputValue }) => {
+                  // Filtra produtos que são pais (sem idProdutoPai) e não têm TAMANHO no nome
+                  const produtosFiltrados = options.filter(option => 
+                    !option.idProdutoPai && !option.nome.includes('TAMANHO:')
+                  );
+                  
+                  if (!inputValue) return produtosFiltrados;
+                  
+                  const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                  return produtosFiltrados.filter(option => {
+                    const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                    return terms.every(term => searchText.includes(term));
+                  });
+                }}
+                renderInput={(params: any) => (
+                  <TextField 
+                    {...params} 
+                    label="Item" 
+                    fullWidth 
+                    size="small"
+                    error={!!errorProdutos}
+                    helperText={errorProdutos || "Somente itens relacionados ao item principal podem ser selecionados"}
+                    InputLabelProps={{
+                      shrink: true
+                    }}
+                  />
+                )}
+              />
             </Grid>
             <Grid item xs={3}>
               <TextField
@@ -536,8 +571,8 @@ const NovaOrdemProducao = () => {
           </Button>
         </Box>
 
-        {grades.map((grade, index) => (
-          <Box key={grade.codigo || index} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+        {Object.entries(grades).map(([gradeId, grade]) => (
+          <Box key={gradeId} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={7}>
                 <Autocomplete
@@ -548,22 +583,27 @@ const NovaOrdemProducao = () => {
                   }) || null}
                   onChange={(_, newValue) => {
                     console.log('Novo valor selecionado na grade:', newValue);
-                    const newGrades = [...grades];
                     if (newValue) {
-                      newGrades[index] = {
-                        ...newGrades[index],
-                        codigo: newValue.codigo || '',
-                        produtoId: newValue.id
-                      };
+                      setGrades(prevGrades => ({
+                        ...prevGrades,
+                        [gradeId]: {
+                          ...prevGrades[gradeId],
+                          codigo: newValue.codigo || '',
+                          produtoId: newValue.id,
+                          nome: newValue.nome
+                        }
+                      }));
                     } else {
-                      newGrades[index] = {
-                        ...newGrades[index],
-                        codigo: '',
-                        produtoId: ''
-                      };
+                      setGrades(prevGrades => ({
+                        ...prevGrades,
+                        [gradeId]: {
+                          ...prevGrades[gradeId],
+                          codigo: '',
+                          produtoId: '',
+                          nome: ''
+                        }
+                      }));
                     }
-                    console.log('Grades atualizadas:', newGrades);
-                    setGrades(newGrades);
                   }}
                   loading={loadingProdutos}
                   getOptionLabel={(option) => option.nome}
@@ -618,9 +658,13 @@ const NovaOrdemProducao = () => {
                   type="number"
                   value={grade.quantidadePrevista}
                   onChange={(e) => {
-                    const newGrades = [...grades];
-                    newGrades[index].quantidadePrevista = Number(e.target.value);
-                    setGrades(newGrades);
+                    setGrades(prevGrades => ({
+                      ...prevGrades,
+                      [gradeId]: {
+                        ...prevGrades[gradeId],
+                        quantidadePrevista: Number(e.target.value)
+                      }
+                    }));
                   }}
                   fullWidth
                   size="small"
@@ -638,7 +682,7 @@ const NovaOrdemProducao = () => {
                 <Button
                   variant="outlined"
                   color="error"
-                  onClick={() => setDialogoRemocao({ aberto: true, indice: index })}
+                  onClick={() => setDialogoRemocao({ aberto: true, gradeId })}
                   size="small"
                   tabIndex={-1}
                 >
@@ -652,7 +696,7 @@ const NovaOrdemProducao = () => {
 
       <Dialog
         open={dialogoRemocao.aberto}
-        onClose={() => setDialogoRemocao({ aberto: false, indice: null })}
+        onClose={() => setDialogoRemocao({ aberto: false, gradeId: null })}
       >
         <DialogTitle>Confirmar Remoção</DialogTitle>
         <DialogContent>
@@ -662,18 +706,21 @@ const NovaOrdemProducao = () => {
         </DialogContent>
         <DialogActions>
           <Button 
-            onClick={() => setDialogoRemocao({ aberto: false, indice: null })}
+            onClick={() => setDialogoRemocao({ aberto: false, gradeId: null })}
             color="primary"
           >
             Não
           </Button>
           <Button
             onClick={() => {
-              if (dialogoRemocao.indice !== null) {
-                const newGrades = grades.filter((_, i) => i !== dialogoRemocao.indice);
-                setGrades(newGrades);
+              if (dialogoRemocao.gradeId) {
+                setGrades(prevGrades => {
+                  const newGrades = { ...prevGrades };
+                  delete newGrades[dialogoRemocao.gradeId!];
+                  return newGrades;
+                });
               }
-              setDialogoRemocao({ aberto: false, indice: null });
+              setDialogoRemocao({ aberto: false, gradeId: null });
             }}
             color="error"
             variant="contained"
