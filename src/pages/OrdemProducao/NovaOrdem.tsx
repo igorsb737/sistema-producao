@@ -47,6 +47,15 @@ const NovaOrdemProducao = () => {
   const [previsaoMalha, setPrevisaoMalha] = useState('');
   const [previsaoRibana, setPrevisaoRibana] = useState('');
 
+  const totalPrevisto = useMemo(() => {
+    return grades.reduce((total, grade) => total + grade.quantidadePrevista, 0);
+  }, [grades]);
+
+  const rendimentoPrevisto = useMemo(() => {
+    if (!previsaoMalha || Number(previsaoMalha) === 0) return '-';
+    return (totalPrevisto / Number(previsaoMalha)).toFixed(2);
+  }, [totalPrevisto, previsaoMalha]);
+
   const { produtos, loading: loadingProdutos, error: errorProdutos } = useProdutos();
   const { malhas, loading: loadingMalhas, error: errorMalhas } = useMalhas();
   const { ribanas, loading: loadingRibanas, error: errorRibanas } = useRibanas();
@@ -172,8 +181,8 @@ const NovaOrdemProducao = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <TextField
-              label="Rendimento"
-              value="-"
+              label="Rendimento Previsto"
+              value={rendimentoPrevisto}
               disabled
               fullWidth
               size="small"
@@ -181,8 +190,8 @@ const NovaOrdemProducao = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <TextField
-              label="Peças Total"
-              value="-"
+              label="Peças Total Prevista"
+              value={totalPrevisto || '-'}
               disabled
               fullWidth
               size="small"
