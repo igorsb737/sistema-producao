@@ -25,6 +25,7 @@ export interface OrdemProducao {
   consumoRibana?: number;
   previsaoRibana?: string;
   grades: Grade[];
+  observacao?: string;
 }
 
 export const useOrdemProducao = () => {

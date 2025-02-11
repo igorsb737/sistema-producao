@@ -16,6 +16,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
@@ -46,6 +50,11 @@ const NovaOrdemProducao = () => {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [previsaoMalha, setPrevisaoMalha] = useState('');
   const [previsaoRibana, setPrevisaoRibana] = useState('');
+  const [observacao, setObservacao] = useState('');
+  const [dialogoRemocao, setDialogoRemocao] = useState<{aberto: boolean; indice: number | null}>({
+    aberto: false,
+    indice: null
+  });
 
   const totalPrevisto = useMemo(() => {
     return grades.reduce((total, grade) => total + grade.quantidadePrevista, 0);
@@ -96,6 +105,7 @@ const NovaOrdemProducao = () => {
         grades,
         status: 'Aberta',
         totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
+        observacao,
       });
       
       navigate('/ordens');
@@ -366,13 +376,14 @@ const NovaOrdemProducao = () => {
         </Grid>
       </Paper>
 
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Grade de Produção</Typography>
           <Button
             variant="outlined"
             onClick={adicionarGrade}
             disabled={!itemSelecionado}
+            size="small"
           >
             Adicionar Grade
           </Button>
@@ -454,7 +465,7 @@ const NovaOrdemProducao = () => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} md={2}>
                 <TextField
                   label="Quantidade Prevista"
                   type="number"
@@ -468,15 +479,21 @@ const NovaOrdemProducao = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                 <Button
-                  sx={{ marginLeft: 4 }}
+                  variant="outlined"
+                  onClick={adicionarGrade}
+                  disabled={!itemSelecionado}
+                  size="small"
+                >
+                  Adicionar Grade
+                </Button>
+                <Button
                   variant="outlined"
                   color="error"
-                  onClick={() => {
-                    const newGrades = grades.filter((_, i) => i !== index);
-                    setGrades(newGrades);
-                  }}
+                  onClick={() => setDialogoRemocao({ aberto: true, indice: index })}
+                  size="small"
+                  tabIndex={-1}
                 >
                   Remover
                 </Button>
@@ -484,6 +501,61 @@ const NovaOrdemProducao = () => {
             </Grid>
           </Box>
         ))}
+      </Paper>
+
+      <Dialog
+        open={dialogoRemocao.aberto}
+        onClose={() => setDialogoRemocao({ aberto: false, indice: null })}
+      >
+        <DialogTitle>Confirmar Remoção</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tem certeza que deseja remover este item da grade?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDialogoRemocao({ aberto: false, indice: null })}
+            color="primary"
+          >
+            Não
+          </Button>
+          <Button
+            onClick={() => {
+              if (dialogoRemocao.indice !== null) {
+                const newGrades = grades.filter((_, i) => i !== dialogoRemocao.indice);
+                setGrades(newGrades);
+              }
+              setDialogoRemocao({ aberto: false, indice: null });
+            }}
+            color="error"
+            variant="contained"
+          >
+            Sim
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Observações
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <TextField
+              label="Observação"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              fullWidth
+              multiline
+              rows={4}
+              size="small"
+              InputLabelProps={{
+                shrink: true
+              }}
+            />
+          </Grid>
+        </Grid>
       </Paper>
     </Box>
   );
