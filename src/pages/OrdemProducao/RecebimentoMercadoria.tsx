@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   TableHead,
   TableRow,
   Checkbox,
+  Chip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,10 +21,34 @@ function RecebimentoMercadoria() {
   const { ordens, loading, error } = useOrdemProducao();
   const [selectedOrdens, setSelectedOrdens] = useState<string[]>([]);
 
-  // Filtra apenas ordens com status "Aberta"
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Aberta':
+        return 'primary';
+      case 'Em Entrega':
+        return 'warning';
+      case 'Finalizado':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  // Filtra ordens com status "Aberta" ou "Em Entrega"
   const ordensDisponiveis = ordens.filter(
-    (ordem) => ordem.informacoesGerais.status === 'Aberta'
+    (ordem) => ordem.informacoesGerais.status === 'Aberta' || 
+               ordem.informacoesGerais.status === 'Em Entrega'
   );
+
+  // Calcula o total de camisetas entregues para uma ordem
+  const calcularTotalEntregue = (ordem: OrdemProducao) => {
+    return Object.values(ordem.grades).reduce((total, grade) => {
+      if (!grade.recebimentos) return total;
+      return total + grade.recebimentos.reduce((sum: number, rec: { quantidade: number }) => {
+        return sum + rec.quantidade;
+      }, 0);
+    }, 0);
+  };
 
   const handleToggleOrdem = (numero: string) => {
     setSelectedOrdens((prev) =>
@@ -99,12 +124,14 @@ function RecebimentoMercadoria() {
                 <TableCell>Data Entrega</TableCell>
                 <TableCell>Cliente</TableCell>
                 <TableCell>Total Camisetas</TableCell>
+                <TableCell>Total Entregue</TableCell>
+                <TableCell>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {ordensDisponiveis.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={9} align="center">
                     Nenhuma ordem de produção disponível para recebimento
                   </TableCell>
                 </TableRow>
@@ -131,6 +158,14 @@ function RecebimentoMercadoria() {
                     <TableCell>{ordem.informacoesGerais.dataEntrega}</TableCell>
                     <TableCell>{ordem.informacoesGerais.cliente}</TableCell>
                     <TableCell>{ordem.informacoesGerais.totalCamisetas}</TableCell>
+                    <TableCell>{calcularTotalEntregue(ordem)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={ordem.informacoesGerais.status}
+                        color={getStatusColor(ordem.informacoesGerais.status)}
+                        size="small"
+                      />
+                    </TableCell>
                   </TableRow>
                 ))
               )}
