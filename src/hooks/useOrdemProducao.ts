@@ -1,4 +1,4 @@
-import { ref, push, set, get, query, orderByChild } from 'firebase/database';
+import { ref, push, set, get } from 'firebase/database';
 import { database } from '../config/firebase';
 import { useState, useEffect } from 'react';
 
@@ -9,6 +9,7 @@ interface Grade {
 }
 
 export interface OrdemProducao {
+  id: string;
   numero: string;
   dataInicio: string;
   dataFechamento?: string;
@@ -36,15 +37,15 @@ export const useOrdemProducao = () => {
   const carregarOrdens = async () => {
     try {
       const ordensRef = ref(database, 'ordens');
-      const ordensQuery = query(ordensRef, orderByChild('dataInicio'));
-      const snapshot = await get(ordensQuery);
+      const snapshot = await get(ordensRef);
       
       if (snapshot.exists()) {
         const ordensData = snapshot.val();
         console.log('Dados do Firebase:', ordensData);
         const ordensArray = Object.entries(ordensData)
           .map(([key, value]) => ({
-            ...value as OrdemProducao
+            ...value as Omit<OrdemProducao, 'id'>,
+            id: key
           }))
           .sort((a, b) => {
             // Converte as datas para timestamp para comparação
@@ -119,12 +120,31 @@ export const useOrdemProducao = () => {
     carregarOrdens();
   }, []);
 
+  const editarOrdem = async (id: string, ordem: Omit<OrdemProducao, 'numero'>) => {
+    try {
+      const ordemRef = ref(database, `ordens/${id}`);
+      const snapshot = await get(ordemRef);
+      if (snapshot.exists()) {
+        const ordemAtual = snapshot.val();
+        await set(ordemRef, {
+          ...ordem,
+          numero: ordemAtual.numero,
+        });
+      }
+      await carregarOrdens();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao editar ordem');
+      throw err;
+    }
+  };
+
   return {
     ordens,
     loading,
     error,
     criarOrdem,
     finalizarOrdem,
+    editarOrdem,
     recarregarOrdens: carregarOrdens,
   };
 };

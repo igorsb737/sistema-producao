@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMalhas } from '../../hooks/useMalhas';
 import { useRibanas } from '../../hooks/useRibanas';
 import { useProdutos } from '../../hooks/useProdutos';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
 import {
   Box,
@@ -40,7 +40,8 @@ interface ItemSelecionado {
 }
 
 const NovaOrdemProducao = () => {
-  const [dataInicio] = useState(dayjs());
+  const { id } = useParams();
+  const [dataInicio, setDataInicio] = useState<dayjs.Dayjs | null>(dayjs());
   const [dataEntrega, setDataEntrega] = useState<dayjs.Dayjs | null>(null);
   const [dataFechamento, setDataFechamento] = useState<dayjs.Dayjs | null>(null);
   const [cliente, setCliente] = useState('');
@@ -68,7 +69,48 @@ const NovaOrdemProducao = () => {
   const { produtos, loading: loadingProdutos, error: errorProdutos } = useProdutos();
   const { malhas, loading: loadingMalhas, error: errorMalhas } = useMalhas();
   const { ribanas, loading: loadingRibanas, error: errorRibanas } = useRibanas();
+  const { ordens, criarOrdem, editarOrdem } = useOrdemProducao();
   
+  // Carrega os dados da ordem existente
+  useEffect(() => {
+    if (id) {
+      const ordem = ordens.find(o => o.numero === id.padStart(4, '0'));
+      if (ordem) {
+        setDataInicio(dayjs(ordem.dataInicio, 'DD-MM-YYYY'));
+        if (ordem.dataEntrega) {
+          setDataEntrega(dayjs(ordem.dataEntrega, 'DD-MM-YYYY'));
+        }
+        if (ordem.dataFechamento) {
+          setDataFechamento(dayjs(ordem.dataFechamento, 'DD-MM-YYYY'));
+        }
+        setCliente(ordem.cliente || '');
+        
+        // Encontra o item nos produtos
+        const item = produtos.find(p => p.nome === ordem.item);
+        if (item) {
+          setItemSelecionado(item);
+        }
+
+        // Encontra a malha
+        const malha = malhas.find(m => m.nome === ordem.malha);
+        if (malha) {
+          setMalhaSelecionada(malha);
+        }
+
+        // Encontra a ribana
+        const ribana = ribanas.find(r => r.nome === ordem.ribana);
+        if (ribana) {
+          setRibanaSelecionada(ribana);
+        }
+
+        setPrevisaoMalha(ordem.previsaoMalha || '');
+        setPrevisaoRibana(ordem.previsaoRibana || '');
+        setGrades(ordem.grades || []);
+        setObservacao(ordem.observacao || '');
+      }
+    }
+  }, [id, ordens, produtos, malhas, ribanas]);
+
   const adicionarGrade = () => {
     if (!itemSelecionado) return;
     
@@ -82,7 +124,6 @@ const NovaOrdemProducao = () => {
   };
 
   const navigate = useNavigate();
-  const { criarOrdem } = useOrdemProducao();
 
   const handleSubmit = async (e: React.FormEvent, isRascunho: boolean = false) => {
     e.preventDefault();
@@ -90,26 +131,33 @@ const NovaOrdemProducao = () => {
     // Para rascunho, permite salvar sem validações
     if (isRascunho) {
       try {
-      const ordemData: any = {
-        dataInicio: dataInicio.format('DD-MM-YYYY'),
-        dataEntrega: dataEntrega ? dataEntrega.format('DD-MM-YYYY') : dataInicio.format('DD-MM-YYYY'),
-        cliente: cliente || '',
-        item: itemSelecionado?.nome || '',
-        malha: malhaSelecionada?.nome || '',
-        ribana: ribanaSelecionada?.nome || '',
-        previsaoMalha: previsaoMalha || '',
-        previsaoRibana: previsaoRibana || '',
-        grades: grades || [],
-        status: 'Rascunho',
-        totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
-        observacao: observacao || ''
-      };
+        const ordemData: any = {
+          dataInicio: dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY'),
+          dataEntrega: dataEntrega ? dataEntrega.format('DD-MM-YYYY') : (dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY')),
+          cliente: cliente || '',
+          item: itemSelecionado?.nome || '',
+          malha: malhaSelecionada?.nome || '',
+          ribana: ribanaSelecionada?.nome || '',
+          previsaoMalha: previsaoMalha || '',
+          previsaoRibana: previsaoRibana || '',
+          grades: grades || [],
+          status: 'Rascunho',
+          totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
+          observacao: observacao || ''
+        };
 
-      if (dataFechamento) {
-        ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
-      }
+        if (dataFechamento) {
+          ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
+        }
 
-      await criarOrdem(ordemData);
+        if (id) {
+          const ordem = ordens.find(o => o.numero === id.padStart(4, '0'));
+          if (ordem) {
+            await editarOrdem(ordem.id, ordemData);
+          }
+        } else {
+          await criarOrdem(ordemData);
+        }
         
         navigate('/ordens');
         return;
@@ -169,7 +217,7 @@ const NovaOrdemProducao = () => {
       }
 
       const ordemData: any = {
-        dataInicio: dataInicio.format('DD-MM-YYYY'),
+        dataInicio: dataInicio?.format('DD-MM-YYYY') || dayjs().format('DD-MM-YYYY'),
         dataEntrega: dataEntrega.format('DD-MM-YYYY'),
         cliente,
         item: itemSelecionado.nome,
@@ -187,11 +235,18 @@ const NovaOrdemProducao = () => {
         ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
       }
 
-      await criarOrdem(ordemData);
+      if (id) {
+        const ordem = ordens.find(o => o.numero === id.padStart(4, '0'));
+        if (ordem) {
+          await editarOrdem(ordem.id, ordemData);
+        }
+      } else {
+        await criarOrdem(ordemData);
+      }
       
       navigate('/ordens');
     } catch (error) {
-      alert('Erro ao criar ordem de produção');
+      alert('Erro ao salvar ordem de produção');
       console.error(error);
     }
   };
@@ -199,7 +254,7 @@ const NovaOrdemProducao = () => {
   return (
     <Box component="form" onSubmit={(e) => handleSubmit(e, false)}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, mt: 3 }}>
-        <Typography variant="h4">Nova Ordem de Produção</Typography>
+        <Typography variant="h4">{id ? 'Editar Ordem de Produção' : 'Nova Ordem de Produção'}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             onClick={(e) => handleSubmit(e, true)}
@@ -224,6 +279,7 @@ const NovaOrdemProducao = () => {
             <DatePicker
               label="Data de Início"
               value={dataInicio}
+              onChange={setDataInicio}
               slotProps={{ textField: { fullWidth: true, size: "small" } }}
             />
           </Grid>

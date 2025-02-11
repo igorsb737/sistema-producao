@@ -16,6 +16,7 @@
     "@mui/icons-material": "^6.4.3",
     "@mui/material": "^6.4.3",
     "@mui/x-date-pickers": "^7.26.0",
+    "date-fns": "^2.30.0",
     "dayjs": "^1.11.13",
     "firebase": "^11.3.0",
     "react": "^19.0.0",
