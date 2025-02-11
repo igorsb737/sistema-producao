@@ -15,9 +15,9 @@ import {
 import { Add as AddIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-const OrdemProducaoPage = () => {
+function OrdemProducaoPage() {
   const navigate = useNavigate();
-  const { ordens, loading, error } = useOrdemProducao();
+  const { ordens, loading, error, recarregarOrdens } = useOrdemProducao();
 
   const getStatusColor = (status: string) => {
     return status === 'Aberta' ? 'primary' : 'success';
@@ -29,13 +29,22 @@ const OrdemProducaoPage = () => {
         <Typography variant="h4">
           Ordens de Produção
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/ordens/nova')}
-        >
-          Nova Ordem
-        </Button>
+        <Box>
+          <Button
+            variant="outlined"
+            onClick={recarregarOrdens}
+            sx={{ mr: 2 }}
+          >
+            Recarregar
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/ordens/nova')}
+          >
+            Nova Ordem
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
@@ -95,6 +104,6 @@ const OrdemProducaoPage = () => {
       )}
     </Box>
   );
-};
+}
 
 export default OrdemProducaoPage;

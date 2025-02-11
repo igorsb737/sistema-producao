@@ -84,18 +84,93 @@ const NovaOrdemProducao = () => {
   const navigate = useNavigate();
   const { criarOrdem } = useOrdemProducao();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, isRascunho: boolean = false) => {
     e.preventDefault();
-    if (!dataEntrega || !cliente || !itemSelecionado || !malhaSelecionada || !ribanaSelecionada || grades.length === 0) {
-      alert('Por favor, preencha todos os campos obrigatórios');
+
+    // Para rascunho, permite salvar sem validações
+    if (isRascunho) {
+      try {
+      const ordemData: any = {
+        dataInicio: dataInicio.format('DD-MM-YYYY'),
+        dataEntrega: dataEntrega ? dataEntrega.format('DD-MM-YYYY') : dataInicio.format('DD-MM-YYYY'),
+        cliente: cliente || '',
+        item: itemSelecionado?.nome || '',
+        malha: malhaSelecionada?.nome || '',
+        ribana: ribanaSelecionada?.nome || '',
+        previsaoMalha: previsaoMalha || '',
+        previsaoRibana: previsaoRibana || '',
+        grades: grades || [],
+        status: 'Rascunho',
+        totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
+        observacao: observacao || ''
+      };
+
+      if (dataFechamento) {
+        ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
+      }
+
+      await criarOrdem(ordemData);
+        
+        navigate('/ordens');
+        return;
+      } catch (error) {
+        alert('Erro ao salvar rascunho');
+        console.error(error);
+        return;
+      }
+    }
+
+    // Validações para salvar ordem
+    const erros: string[] = [];
+
+    if (!dataEntrega) {
+      erros.push('Data de Entrega é obrigatória');
+    }
+
+    if (!itemSelecionado) {
+      erros.push('Item é obrigatório');
+    }
+
+    if (!malhaSelecionada) {
+      erros.push('Malha é obrigatória');
+    }
+
+    if (!ribanaSelecionada) {
+      erros.push('Ribana é obrigatória');
+    }
+
+    if (!previsaoMalha) {
+      erros.push('Previsão de Consumo de Malha é obrigatória');
+    }
+
+    if (!previsaoRibana) {
+      erros.push('Previsão de Consumo de Ribana é obrigatória');
+    }
+
+    // Validação das grades
+    if (grades.length === 0) {
+      erros.push('É necessário adicionar pelo menos uma grade de produção');
+    } else {
+      const gradesInvalidas = grades.some(grade => !grade.codigo || !grade.quantidadePrevista);
+      if (gradesInvalidas) {
+        erros.push('Todas as grades devem ter um item e quantidade prevista preenchidos');
+      }
+    }
+
+    if (erros.length > 0) {
+      alert('Por favor, corrija os seguintes erros:\n\n' + erros.join('\n'));
       return;
     }
 
     try {
-      await criarOrdem({
+      // Neste ponto, já passamos pelas validações, então podemos garantir que os valores existem
+      if (!dataEntrega || !itemSelecionado || !malhaSelecionada || !ribanaSelecionada) {
+        throw new Error('Valores obrigatórios não preenchidos');
+      }
+
+      const ordemData: any = {
         dataInicio: dataInicio.format('DD-MM-YYYY'),
         dataEntrega: dataEntrega.format('DD-MM-YYYY'),
-        dataFechamento: dataFechamento ? dataFechamento.format('DD-MM-YYYY') : undefined,
         cliente,
         item: itemSelecionado.nome,
         malha: malhaSelecionada.nome,
@@ -103,10 +178,16 @@ const NovaOrdemProducao = () => {
         previsaoMalha,
         previsaoRibana,
         grades,
-        status: 'Aberta',
+        status: isRascunho ? 'Rascunho' : 'Aberta',
         totalCamisetas: grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
-        observacao,
-      });
+        observacao
+      };
+
+      if (dataFechamento) {
+        ordemData.dataFechamento = dataFechamento.format('DD-MM-YYYY');
+      }
+
+      await criarOrdem(ordemData);
       
       navigate('/ordens');
     } catch (error) {
@@ -116,12 +197,22 @@ const NovaOrdemProducao = () => {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
+    <Box component="form" onSubmit={(e) => handleSubmit(e, false)}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, mt: 3 }}>
         <Typography variant="h4">Nova Ordem de Produção</Typography>
-        <Button type="submit" variant="contained" color="primary">
-          Salvar Ordem
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            onClick={(e) => handleSubmit(e, true)}
+            variant="contained"
+            color="inherit"
+            sx={{ bgcolor: 'grey.500', color: 'white', '&:hover': { bgcolor: 'grey.600' } }}
+          >
+            Salvar como Rascunho
+          </Button>
+          <Button type="submit" variant="contained" color="primary">
+            Salvar Ordem
+          </Button>
+        </Box>
       </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -183,7 +274,7 @@ const NovaOrdemProducao = () => {
           <Grid item xs={12} md={3}>
             <TextField
               label="Status"
-              value="Em Aberto"
+              value="Rascunho"
               disabled
               fullWidth
               size="small"

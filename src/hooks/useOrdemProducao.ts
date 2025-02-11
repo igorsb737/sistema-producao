@@ -13,7 +13,7 @@ export interface OrdemProducao {
   dataInicio: string;
   dataFechamento?: string;
   dataEntrega: string;
-  status: 'Aberta' | 'Finalizado';
+  status: 'Rascunho' | 'Aberta' | 'Finalizado';
   totalCamisetas: number;
   rendimento?: number;
   cliente: string;
@@ -41,10 +41,18 @@ export const useOrdemProducao = () => {
       
       if (snapshot.exists()) {
         const ordensData = snapshot.val();
-        const ordensArray = Object.entries(ordensData).map(([key, value]) => ({
-          id: key,
-          ...(value as Omit<OrdemProducao, 'id'>),
-        }));
+        console.log('Dados do Firebase:', ordensData);
+        const ordensArray = Object.entries(ordensData)
+          .map(([key, value]) => ({
+            ...value as OrdemProducao
+          }))
+          .sort((a, b) => {
+            // Converte as datas para timestamp para comparação
+            const dateA = new Date(a.dataInicio.split('-').reverse().join('-')).getTime();
+            const dateB = new Date(b.dataInicio.split('-').reverse().join('-')).getTime();
+            return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+          });
+        console.log('Array de ordens mapeado e ordenado:', ordensArray);
         setOrdens(ordensArray);
       } else {
         setOrdens([]);
@@ -74,7 +82,7 @@ export const useOrdemProducao = () => {
       const novaOrdem: OrdemProducao = {
         ...ordem,
         numero: proximoNumero.toString().padStart(4, '0'),
-        status: 'Aberta',
+        status: ordem.status || 'Aberta',
         totalCamisetas: ordem.grades.reduce((total, grade) => total + grade.quantidadePrevista, 0),
       };
 
@@ -91,10 +99,15 @@ export const useOrdemProducao = () => {
   const finalizarOrdem = async (id: string) => {
     try {
       const ordemRef = ref(database, `ordens/${id}`);
-      await set(ordemRef, {
-        status: 'Finalizado',
-        dataFechamento: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
-      });
+      const snapshot = await get(ordemRef);
+      if (snapshot.exists()) {
+        const ordemAtual = snapshot.val();
+        await set(ordemRef, {
+          ...ordemAtual,
+          status: 'Finalizado',
+          dataFechamento: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+        });
+      }
       await carregarOrdens();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao finalizar ordem');
