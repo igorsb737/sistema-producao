@@ -2,12 +2,18 @@ import { ref, push, set, get } from 'firebase/database';
 import { database } from '../config/firebase';
 import { useState, useEffect } from 'react';
 
+interface Recebimento {
+  quantidade: number;
+  data: string;
+}
+
 interface Grade {
   codigo: string;
   produtoId: string;
   nome: string;
   quantidadePrevista: number;
   entregas: number[];
+  recebimentos?: Recebimento[];
 }
 
 interface Grades {
@@ -42,7 +48,7 @@ interface InformacoesGerais {
   totalCamisetas: number;
 }
 
-export type Status = 'Rascunho' | 'Aberta' | 'Finalizado';
+export type Status = 'Rascunho' | 'Aberta' | 'Em Entrega' | 'Finalizado';
 
 export interface OrdemProducao {
   id: string;
@@ -229,6 +235,49 @@ export const useOrdemProducao = () => {
     }
   };
 
+  const registrarRecebimento = async (
+    ordemId: string,
+    gradeId: string,
+    recebimento: Recebimento
+  ) => {
+    try {
+      const ordemRef = ref(database, `ordens/${ordemId}`);
+      const snapshot = await get(ordemRef);
+      
+      if (snapshot.exists()) {
+        const ordemAtual = snapshot.val();
+        const grade = ordemAtual.grades[gradeId];
+        
+        // Inicializa o array de recebimentos se não existir
+        if (!grade.recebimentos) {
+          grade.recebimentos = [];
+        }
+        
+        // Adiciona o novo recebimento
+        grade.recebimentos.push(recebimento);
+        
+        // Atualiza a grade e o status da ordem no Firebase
+        await set(ref(database, `ordens/${ordemId}`), {
+          ...ordemAtual,
+          grades: {
+            ...ordemAtual.grades,
+            [gradeId]: grade
+          },
+          informacoesGerais: {
+            ...ordemAtual.informacoesGerais,
+            status: 'Em Entrega' as Status
+          }
+        });
+      }
+      
+      await carregarOrdens();
+    } catch (err) {
+      console.error('Erro ao registrar recebimento:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao registrar recebimento');
+      throw err;
+    }
+  };
+
   return {
     ordens,
     loading,
@@ -236,6 +285,7 @@ export const useOrdemProducao = () => {
     criarOrdem,
     finalizarOrdem,
     editarOrdem,
+    registrarRecebimento,
     recarregarOrdens: carregarOrdens,
   };
 };

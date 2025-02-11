@@ -1,5 +1,5 @@
 import { Box, Container, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import { Menu as MenuIcon, Dashboard, Assignment, Settings, Inventory } from '@mui/icons-material';
+import { Menu as MenuIcon, Dashboard, Assignment, Settings, Inventory, LocalShipping } from '@mui/icons-material';
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 
@@ -10,6 +10,7 @@ const Layout = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'Ordens de Produção', icon: <Assignment />, path: '/ordens' },
+    { text: 'Recebimento', icon: <LocalShipping />, path: '/ordens/recebimento' },
     { text: 'Registros', icon: <Inventory />, path: '/registros' },
     { text: 'Configurações', icon: <Settings />, path: '/configuracoes' },
   ];

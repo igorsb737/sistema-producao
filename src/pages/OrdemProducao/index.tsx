@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 import {
   Box,
@@ -58,7 +58,7 @@ function OrdemProducaoPage() {
         </Typography>
         <Box>
           <Button
-              variant="outlined"
+            variant="outlined"
             onClick={recarregarOrdens}
             sx={{ mr: 2 }}
           >
@@ -201,13 +201,14 @@ function OrdemProducaoPage() {
               <TableCell>Data Entrega</TableCell>
               <TableCell>Cliente</TableCell>
               <TableCell>Total Camisetas</TableCell>
+              <TableCell>Camisetas Entregues</TableCell>
               <TableCell>Status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {ordensFiltered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   Nenhuma ordem de produção encontrada
                 </TableCell>
               </TableRow>
@@ -225,6 +226,11 @@ function OrdemProducaoPage() {
                   <TableCell>{ordem.informacoesGerais.dataEntrega}</TableCell>
                   <TableCell>{ordem.informacoesGerais.cliente}</TableCell>
                   <TableCell>{ordem.informacoesGerais.totalCamisetas}</TableCell>
+                  <TableCell>
+                    {Object.values(ordem.grades || {}).reduce((total, grade) => {
+                      return total + (grade.recebimentos?.reduce((sum, rec) => sum + rec.quantidade, 0) || 0);
+                    }, 0)}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={ordem.informacoesGerais.status}
