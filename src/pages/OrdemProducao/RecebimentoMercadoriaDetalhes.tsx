@@ -201,27 +201,56 @@ function RecebimentoMercadoriaDetalhes() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {itensRecebimento.map((item, index) => (
-              <TableRow key={`${item.ordemNumero}-${item.gradeId}`}>
-                <TableCell>{item.ordemNumero}</TableCell>
-                <TableCell>{item.nome}</TableCell>
-                <TableCell align="right">{item.quantidadePrevista}</TableCell>
-                <TableCell align="right">{item.quantidadeTotalRecebida}</TableCell>
-                <TableCell align="right">
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={item.quantidadeRecebida || ''}
-                    onChange={(e) => handleQuantidadeChange(index, e.target.value)}
-                    inputProps={{
-                      min: 0,
-                      max: item.quantidadePrevista - item.quantidadeTotalRecebida,
-                    }}
-                    sx={{ width: 100 }}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+            {itensRecebimento.reduce((acc: React.ReactNode[], item, index, array) => {
+              // Verifica se é o primeiro item ou se a ordem mudou
+              const isNewOrder = index === 0 || array[index - 1].ordemNumero !== item.ordemNumero;
+              // Adiciona espaçamento entre ordens diferentes
+              if (isNewOrder && index !== 0) {
+                acc.push(
+                  <TableRow key={`spacer-${item.ordemNumero}`}>
+                    <TableCell 
+                      colSpan={5} 
+                      sx={{ 
+                        padding: '16px 0',
+                        border: 'none',
+                        backgroundColor: '#424242'
+                      }} 
+                    />
+                  </TableRow>
+                );
+              }
+
+              acc.push(
+                <TableRow 
+                  key={`${item.ordemNumero}-${item.gradeId}`}
+                  sx={{ 
+                    '&:hover': {
+                      backgroundColor: '#e3f2fd'
+                    }
+                  }}
+                >
+                  <TableCell>{item.ordemNumero}</TableCell>
+                  <TableCell>{item.nome}</TableCell>
+                  <TableCell align="right">{item.quantidadePrevista}</TableCell>
+                  <TableCell align="right">{item.quantidadeTotalRecebida}</TableCell>
+                  <TableCell align="right">
+                    <TextField
+                      type="number"
+                      size="small"
+                      value={item.quantidadeRecebida || ''}
+                      onChange={(e) => handleQuantidadeChange(index, e.target.value)}
+                      inputProps={{
+                        min: 0,
+                        max: item.quantidadePrevista - item.quantidadeTotalRecebida,
+                      }}
+                      sx={{ width: 100 }}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+
+              return acc;
+            }, [])}
           </TableBody>
         </Table>
       </TableContainer>

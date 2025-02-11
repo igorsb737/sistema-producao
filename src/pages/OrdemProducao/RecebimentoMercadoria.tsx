@@ -26,7 +26,7 @@ function RecebimentoMercadoria() {
       case 'Aberta':
         return 'primary';
       case 'Em Entrega':
-        return 'warning';
+        return 'success';
       case 'Finalizado':
         return 'success';
       default:
