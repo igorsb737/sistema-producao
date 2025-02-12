@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { getSizeWeight } from '../../utils/sorting';
 import {
   Box,
   Typography,
@@ -49,16 +50,21 @@ function RecebimentoMercadoriaDetalhes() {
       numerosOrdens.includes(ordem.informacoesGerais.numero)
     );
 
-    const itens: RecebimentoItem[] = [];
+    // Agrupa os itens por ordem
+    const itensPorOrdem: { [key: string]: RecebimentoItem[] } = {};
+    
     ordensRecebimento.forEach((ordem) => {
+      const numeroOrdem = ordem.informacoesGerais.numero;
+      itensPorOrdem[numeroOrdem] = [];
+      
       Object.entries(ordem.grades).forEach(([gradeId, grade]) => {
         const totalRecebido = (grade.recebimentos || []).reduce(
           (total, rec) => total + rec.quantidade,
           0
         );
 
-        itens.push({
-          ordemNumero: ordem.informacoesGerais.numero,
+        itensPorOrdem[numeroOrdem].push({
+          ordemNumero: numeroOrdem,
           gradeId,
           nome: grade.nome,
           quantidadePrevista: grade.quantidadePrevista,
@@ -67,9 +73,18 @@ function RecebimentoMercadoriaDetalhes() {
           dataRecebimento: dataRecebimentoGlobal,
         });
       });
+
+      // Ordena os itens desta ordem por tamanho
+      itensPorOrdem[numeroOrdem].sort((a, b) => {
+        const aWeight = getSizeWeight(a.nome);
+        const bWeight = getSizeWeight(b.nome);
+        return aWeight.weight - bWeight.weight;
+      });
     });
 
-    setItensRecebimento(itens);
+    // Concatena todos os itens ordenados
+    const itensOrdenados = Object.values(itensPorOrdem).flat();
+    setItensRecebimento(itensOrdenados);
   }, [ordens, searchParams, navigate]);
 
   const handleQuantidadeChange = (index: number, value: string) => {
