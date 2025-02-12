@@ -4,6 +4,7 @@ import { useRibanas } from '../../hooks/useRibanas';
 import { useProdutos } from '../../hooks/useProdutos';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useOrdemProducao, type Status } from '../../hooks/useOrdemProducao';
+import { sortBySize } from '../../utils/sorting';
 import {
   Box,
   Typography,
@@ -604,28 +605,21 @@ const NovaOrdemProducao = () => {
                   }}
                   filterOptions={(options, { inputValue }) => {
                     // Primeiro filtra por idProdutoPai
-                    console.log('Item Selecionado na Grade:', itemSelecionado);
-                    console.log('Todas as opções:', options);
+                    const filteredByParent = options.filter(option => 
+                      option.idProdutoPai === itemSelecionado?.id
+                    );
                     
-                    const filteredByParent = options.filter(option => {
-                      console.log('Verificando opção:', option.nome, 'idProdutoPai:', option.idProdutoPai);
-                      return option.idProdutoPai === itemSelecionado?.id;
-                    });
-                    
-                    console.log('Opções filtradas por pai:', filteredByParent);
-                    
-                    // Se não houver texto de busca, retorna todos os itens filtrados pelo pai
-                    if (!inputValue) return filteredByParent;
-                    
-                    // Se houver texto de busca, filtra também pelo texto
-                    const searchTerms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                    const finalFiltered = filteredByParent.filter(option => {
-                      const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
-                      return searchTerms.every(term => searchText.includes(term));
-                    });
-                    
-                    console.log('Opções finais após busca:', finalFiltered);
-                    return finalFiltered;
+                    // Aplica a busca por texto se houver
+                    const filteredBySearch = inputValue 
+                      ? filteredByParent.filter(option => {
+                          const searchTerms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                          const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                          return searchTerms.every(term => searchText.includes(term));
+                        })
+                      : filteredByParent;
+
+                    // Ordena os resultados usando a função sortBySize
+                    return sortBySize(filteredBySearch, 'nome');
                   }}
                   renderInput={(params) => (
                     <TextField

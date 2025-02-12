@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../config/firebase';
+import { sortBySize } from '../utils/sorting';
 
 interface Produto {
   id: string;
@@ -44,7 +45,9 @@ export const useProdutos = () => {
             id,
             ...(produto as Omit<Produto, 'id'>)
           }));
-          setProdutos(produtosList);
+          // Ordena a lista de produtos pelo formato (tamanho)
+          const sortedList = sortBySize(produtosList, 'formato');
+          setProdutos(sortedList);
         } else {
           setProdutos([]);
         }
