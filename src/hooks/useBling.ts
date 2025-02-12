@@ -10,10 +10,19 @@ interface ProdutoBling {
   situacao: string;
 }
 
+interface FornecedorBling {
+  id: string;
+  nome: string;
+  codigo: string;
+  situacao: string;
+}
+
 export const useBling = () => {
   const [loading, setLoading] = useState(false);
   const [loadingMalha, setLoadingMalha] = useState(false);
   const [loadingRibana, setLoadingRibana] = useState(false);
+  const [loadingServico, setLoadingServico] = useState(false);
+  const [loadingFornecedor, setLoadingFornecedor] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const atualizarToken = async (): Promise<string> => {
@@ -136,6 +145,10 @@ export const useBling = () => {
     return fetchProdutos(token, pagina, '10319873', '1');
   };
 
+  const fetchServicos = async (token: string, pagina: number = 1): Promise<ProdutoBling[]> => {
+    return fetchProdutos(token, pagina, '10316612', '5');
+  };
+
   const sincronizarMalhas = async (token: string) => {
     setLoadingMalha(true);
     setError(null);
@@ -198,6 +211,37 @@ export const useBling = () => {
     }
   };
 
+  const sincronizarServicos = async (token: string) => {
+    setLoadingServico(true);
+    setError(null);
+    try {
+      let todosServicos: ProdutoBling[] = [];
+      let pagina = 1;
+      let temMaisPaginas = true;
+
+      while (temMaisPaginas) {
+        const servicos = await fetchServicos(token, pagina);
+        if (servicos.length === 0) {
+          temMaisPaginas = false;
+        } else {
+          todosServicos = [...todosServicos, ...servicos];
+          pagina++;
+        }
+      }
+
+      const servicosRef = ref(database, 'servicos');
+      await set(servicosRef, todosServicos);
+
+      return todosServicos;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao sincronizar serviços';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoadingServico(false);
+    }
+  };
+
   const getMalhas = async (): Promise<ProdutoBling[]> => {
     try {
       const malhasRef = ref(database, 'malhas');
@@ -230,17 +274,120 @@ export const useBling = () => {
     }
   };
 
+  const getServicos = async (): Promise<ProdutoBling[]> => {
+    try {
+      const servicosRef = ref(database, 'servicos');
+      const snapshot = await get(servicosRef);
+      
+      if (snapshot.exists()) {
+        return snapshot.val();
+      }
+      return [];
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar serviços';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const fetchFornecedores = async (token: string, pagina: number = 1): Promise<FornecedorBling[]> => {
+    try {
+      const url = new URL('/api/bling/contatos', window.location.origin);
+      url.searchParams.append('pagina', pagina.toString());
+      url.searchParams.append('criterio', '1');
+      url.searchParams.append('idTipoContato', '14578991317');
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (err) {
+      console.error('Erro detalhado:', err);
+      if (err instanceof Error) {
+        throw new Error(`Erro ao buscar fornecedores do Bling: ${err.message}`);
+      }
+      throw new Error('Erro ao buscar fornecedores do Bling');
+    }
+  };
+
+  const sincronizarFornecedores = async (token: string) => {
+    setLoadingFornecedor(true);
+    setError(null);
+    try {
+      let todosFornecedores: FornecedorBling[] = [];
+      let pagina = 1;
+      let temMaisPaginas = true;
+
+      while (temMaisPaginas) {
+        const fornecedores = await fetchFornecedores(token, pagina);
+        if (fornecedores.length === 0) {
+          temMaisPaginas = false;
+        } else {
+          todosFornecedores = [...todosFornecedores, ...fornecedores];
+          pagina++;
+        }
+      }
+
+      // Filtra fornecedores excluídos (situação "E")
+      const fornecedoresAtivos = todosFornecedores.filter(f => f.situacao !== "E");
+      
+      const fornecedoresRef = ref(database, 'fornecedores');
+      await set(fornecedoresRef, fornecedoresAtivos);
+
+      return fornecedoresAtivos;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao sincronizar fornecedores';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoadingFornecedor(false);
+    }
+  };
+
+  const getFornecedores = async (): Promise<FornecedorBling[]> => {
+    try {
+      const fornecedoresRef = ref(database, 'fornecedores');
+      const snapshot = await get(fornecedoresRef);
+      
+      if (snapshot.exists()) {
+        const fornecedores = snapshot.val();
+        // Filtra fornecedores excluídos (situação "E") mesmo ao buscar do Firebase
+        return fornecedores.filter((f: FornecedorBling) => f.situacao !== "E");
+      }
+      return [];
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar fornecedores';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
   return {
     loading,
     loadingMalha,
     loadingRibana,
+    loadingServico,
+    loadingFornecedor,
     error,
     sincronizarProdutos,
     sincronizarMalhas,
     sincronizarRibanas,
+    sincronizarServicos,
+    sincronizarFornecedores,
     getProdutos,
     getMalhas,
     getRibanas,
+    getServicos,
+    getFornecedores,
     atualizarToken,
   };
 };

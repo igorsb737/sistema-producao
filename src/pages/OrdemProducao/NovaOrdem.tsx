@@ -432,7 +432,7 @@ const NovaOrdemProducao = () => {
                     fullWidth 
                     size="small"
                     error={!!errorProdutos}
-                    helperText={errorProdutos || "Somente itens relacionados ao item principal podem ser selecionados"}
+                    helperText={errorProdutos}
                     InputLabelProps={{
                       shrink: true
                     }}
@@ -463,15 +463,10 @@ const NovaOrdemProducao = () => {
                 getOptionLabel={(option) => option.nome}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 filterOptions={(options, { inputValue }) => {
-                  // Filtra apenas itens que contenham a palavra "cor"
-                  const malhasComCor = options.filter(option => 
-                    option.nome.toLowerCase().includes('cor')
-                  );
-                  
-                  if (!inputValue) return malhasComCor;
+                  if (!inputValue) return options;
                   
                   const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                  return malhasComCor.filter(option => {
+                  return options.filter(option => {
                     const searchText = option.nome.toLowerCase();
                     return terms.every(term => searchText.includes(term));
                   });
@@ -514,15 +509,10 @@ const NovaOrdemProducao = () => {
                 getOptionLabel={(option) => option.nome}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 filterOptions={(options, { inputValue }) => {
-                  // Filtra apenas itens que contenham a palavra "cor"
-                  const ribanasComCor = options.filter(option => 
-                    option.nome.toLowerCase().includes('cor')
-                  );
-                  
-                  if (!inputValue) return ribanasComCor;
+                  if (!inputValue) return options;
                   
                   const terms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                  return ribanasComCor.filter(option => {
+                  return options.filter(option => {
                     const searchText = option.nome.toLowerCase();
                     return terms.every(term => searchText.includes(term));
                   });

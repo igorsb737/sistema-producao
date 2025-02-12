@@ -19,10 +19,12 @@ export const useRibanas = () => {
       try {
         const data = snapshot.val();
         if (data) {
-          const ribanasList = Object.entries(data).map(([id, ribana]) => ({
-            id,
-            ...(ribana as Omit<Ribana, 'id'>),
-          }));
+          const ribanasList = Object.entries(data)
+            .map(([id, ribana]) => ({
+              id,
+              nome: (ribana as Omit<Ribana, 'id'>).nome,
+            }))
+            .filter(ribana => ribana.nome.toLowerCase().includes('cor'));
           setRibanas(ribanasList);
         } else {
           setRibanas([]);

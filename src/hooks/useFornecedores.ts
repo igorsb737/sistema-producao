@@ -2,42 +2,40 @@ import { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../config/firebase';
 
-interface Malha {
+interface Fornecedor {
   id: string;
   nome: string;
 }
 
-export const useMalhas = () => {
-  const [malhas, setMalhas] = useState<Malha[]>([]);
+export const useFornecedores = () => {
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const malhasRef = ref(database, 'malhas');
+    const fornecedoresRef = ref(database, 'fornecedores');
     
-    const unsubscribe = onValue(malhasRef, (snapshot) => {
+    const unsubscribe = onValue(fornecedoresRef, (snapshot) => {
       try {
         const data = snapshot.val();
         if (data) {
-          const malhasList = Object.entries(data)
-            .map(([id, malha]) => ({
-              id,
-              nome: (malha as Omit<Malha, 'id'>).nome,
-            }))
-            .filter(malha => malha.nome.toLowerCase().includes('cor'));
-          setMalhas(malhasList);
+          const fornecedoresList = Object.entries(data).map(([id, fornecedor]) => ({
+            id,
+            ...(fornecedor as Omit<Fornecedor, 'id'>),
+          }));
+          setFornecedores(fornecedoresList);
         } else {
-          setMalhas([]);
+          setFornecedores([]);
         }
         setError(null);
       } catch (err) {
-        setError('Erro ao carregar malhas');
+        setError('Erro ao carregar fornecedores');
         console.error(err);
       } finally {
         setLoading(false);
       }
     }, (error) => {
-      setError('Erro ao carregar malhas');
+      setError('Erro ao carregar fornecedores');
       setLoading(false);
       console.error(error);
     });
@@ -45,5 +43,5 @@ export const useMalhas = () => {
     return () => unsubscribe();
   }, []);
 
-  return { malhas, loading, error };
+  return { fornecedores, loading, error };
 };
