@@ -27,6 +27,7 @@ interface Grade {
   nome: string;
   quantidadePrevista: number;
   entregas: number[];
+  mensagensErroCor: string[];
 }
 
 interface Grades {
@@ -49,7 +50,6 @@ const extrairCodigoCor = (nome: string) => {
 const NovaOrdemProducao = () => {
   const { id } = useParams();
   const [dataInicio, setDataInicio] = useState<dayjs.Dayjs | null>(dayjs());
-  const [mensagensErroCor, setMensagensErroCor] = useState<string[]>([]);
   const [dataEntrega, setDataEntrega] = useState<dayjs.Dayjs | null>(null);
   const [dataFechamento, setDataFechamento] = useState<dayjs.Dayjs | null>(null);
   const [cliente, setCliente] = useState('');
@@ -111,7 +111,15 @@ const NovaOrdemProducao = () => {
 
         setPrevisaoMalha(ordem.solicitacao.previsoes.malha || '');
         setPrevisaoRibana(ordem.solicitacao.previsoes.ribana || '');
-        setGrades(ordem.grades || {});
+        // Garante que todas as grades tenham o campo mensagensErroCor
+        const gradesComMensagens = Object.entries(ordem.grades || {}).reduce((acc, [id, grade]) => {
+          acc[id] = {
+            ...grade,
+            mensagensErroCor: []
+          };
+          return acc;
+        }, {} as Grades);
+        setGrades(gradesComMensagens);
         setObservacao(ordem.informacoesGerais.observacao || '');
       }
     }
@@ -127,6 +135,7 @@ const NovaOrdemProducao = () => {
       nome: '',
       quantidadePrevista: 0,
       entregas: [],
+      mensagensErroCor: []
     };
     
     setGrades(prevGrades => ({
@@ -467,23 +476,31 @@ const NovaOrdemProducao = () => {
                 value={malhaSelecionada}
                 onChange={(_, newValue) => {
                   setMalhaSelecionada(newValue);
-                  // Verifica todas as grades existentes
-                  const mensagens: string[] = [];
-                  Object.values(grades).forEach(grade => {
-                    if (grade.nome) {
-                      const corGrade = extrairCodigoCor(grade.nome);
-                      const corMalha = newValue ? extrairCodigoCor(newValue.nome) : null;
-                      const corRibana = ribanaSelecionada ? extrairCodigoCor(ribanaSelecionada.nome) : null;
-                      
-                      if (corMalha && corGrade && corMalha !== corGrade) {
-                        mensagens.push(`Malha (${corMalha})`);
+                  // Atualiza a validação para cada grade existente
+                  setGrades(prevGrades => {
+                    const newGrades = { ...prevGrades };
+                    Object.entries(newGrades).forEach(([gradeId, grade]) => {
+                      if (grade.nome) {
+                        const corGrade = extrairCodigoCor(grade.nome);
+                        const corMalha = newValue ? extrairCodigoCor(newValue.nome) : null;
+                        const corRibana = ribanaSelecionada ? extrairCodigoCor(ribanaSelecionada.nome) : null;
+                        
+                        const mensagens: string[] = [];
+                        if (corMalha && corGrade && corMalha !== corGrade) {
+                          mensagens.push(`Malha (${corMalha})`);
+                        }
+                        if (corRibana && corGrade && corRibana !== corGrade) {
+                          mensagens.push(`Ribana (${corRibana})`);
+                        }
+                        
+                        newGrades[gradeId] = {
+                          ...grade,
+                          mensagensErroCor: mensagens
+                        };
                       }
-                      if (corRibana && corGrade && corRibana !== corGrade) {
-                        mensagens.push(`Ribana (${corRibana})`);
-                      }
-                    }
+                    });
+                    return newGrades;
                   });
-                  setMensagensErroCor(mensagens);
                 }}
                 loading={loadingMalhas}
                 getOptionLabel={(option) => option.nome}
@@ -532,23 +549,31 @@ const NovaOrdemProducao = () => {
                 value={ribanaSelecionada}
                 onChange={(_, newValue) => {
                   setRibanaSelecionada(newValue);
-                  // Verifica todas as grades existentes
-                  const mensagens: string[] = [];
-                  Object.values(grades).forEach(grade => {
-                    if (grade.nome) {
-                      const corGrade = extrairCodigoCor(grade.nome);
-                      const corMalha = malhaSelecionada ? extrairCodigoCor(malhaSelecionada.nome) : null;
-                      const corRibana = newValue ? extrairCodigoCor(newValue.nome) : null;
-                      
-                      if (corMalha && corGrade && corMalha !== corGrade) {
-                        mensagens.push(`Malha (${corMalha})`);
+                  // Atualiza a validação para cada grade existente
+                  setGrades(prevGrades => {
+                    const newGrades = { ...prevGrades };
+                    Object.entries(newGrades).forEach(([gradeId, grade]) => {
+                      if (grade.nome) {
+                        const corGrade = extrairCodigoCor(grade.nome);
+                        const corMalha = malhaSelecionada ? extrairCodigoCor(malhaSelecionada.nome) : null;
+                        const corRibana = newValue ? extrairCodigoCor(newValue.nome) : null;
+                        
+                        const mensagens: string[] = [];
+                        if (corMalha && corGrade && corMalha !== corGrade) {
+                          mensagens.push(`Malha (${corMalha})`);
+                        }
+                        if (corRibana && corGrade && corRibana !== corGrade) {
+                          mensagens.push(`Ribana (${corRibana})`);
+                        }
+                        
+                        newGrades[gradeId] = {
+                          ...grade,
+                          mensagensErroCor: mensagens
+                        };
                       }
-                      if (corRibana && corGrade && corRibana !== corGrade) {
-                        mensagens.push(`Ribana (${corRibana})`);
-                      }
-                    }
+                    });
+                    return newGrades;
                   });
-                  setMensagensErroCor(mensagens);
                 }}
                 loading={loadingRibanas}
                 getOptionLabel={(option) => option.nome}
@@ -630,7 +655,6 @@ const NovaOrdemProducao = () => {
                       if (corRibana && corGrade && corRibana !== corGrade) {
                         mensagens.push(`Ribana (${corRibana})`);
                       }
-                      setMensagensErroCor(mensagens);
 
                       setGrades(prevGrades => ({
                         ...prevGrades,
@@ -638,18 +662,19 @@ const NovaOrdemProducao = () => {
                           ...prevGrades[gradeId],
                           codigo: newValue.codigo || '',
                           produtoId: newValue.id,
-                          nome: newValue.nome
+                          nome: newValue.nome,
+                          mensagensErroCor: mensagens
                         }
                       }));
                     } else {
-                      setMensagensErroCor([]);
                       setGrades(prevGrades => ({
                         ...prevGrades,
                         [gradeId]: {
                           ...prevGrades[gradeId],
                           codigo: '',
                           produtoId: '',
-                          nome: ''
+                          nome: '',
+                          mensagensErroCor: []
                         }
                       }));
                     }
@@ -693,9 +718,9 @@ const NovaOrdemProducao = () => {
                     />
                   )}
                   />
-                  {mensagensErroCor.length > 0 && (
+                  {grade.mensagensErroCor?.length > 0 && (
                     <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
-                      A cor do Item Grade é diferente de: {mensagensErroCor.join(' e ')}
+                      A cor do Item Grade é diferente de: {grade.mensagensErroCor.join(' e ')}
                     </Typography>
                   )}
                 </Grid>
