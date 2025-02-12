@@ -17,8 +17,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/bling/, ''),
         headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer a2d967bd60c1172d85388664d3c54a05d19b6e43'
+          'Accept': 'application/json'
         }
       }
     }
