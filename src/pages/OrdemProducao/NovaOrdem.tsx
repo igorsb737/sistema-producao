@@ -41,9 +41,15 @@ interface ItemSelecionado {
   idProdutoPai?: string;
 }
 
+const extrairCodigoCor = (nome: string) => {
+  const match = nome.toLowerCase().match(/cor:(\d+)/);
+  return match ? match[1] : null;
+};
+
 const NovaOrdemProducao = () => {
   const { id } = useParams();
   const [dataInicio, setDataInicio] = useState<dayjs.Dayjs | null>(dayjs());
+  const [mensagensErroCor, setMensagensErroCor] = useState<string[]>([]);
   const [dataEntrega, setDataEntrega] = useState<dayjs.Dayjs | null>(null);
   const [dataFechamento, setDataFechamento] = useState<dayjs.Dayjs | null>(null);
   const [cliente, setCliente] = useState('');
@@ -459,7 +465,26 @@ const NovaOrdemProducao = () => {
               <Autocomplete
                 options={malhas}
                 value={malhaSelecionada}
-                onChange={(_, newValue) => setMalhaSelecionada(newValue)}
+                onChange={(_, newValue) => {
+                  setMalhaSelecionada(newValue);
+                  // Verifica todas as grades existentes
+                  const mensagens: string[] = [];
+                  Object.values(grades).forEach(grade => {
+                    if (grade.nome) {
+                      const corGrade = extrairCodigoCor(grade.nome);
+                      const corMalha = newValue ? extrairCodigoCor(newValue.nome) : null;
+                      const corRibana = ribanaSelecionada ? extrairCodigoCor(ribanaSelecionada.nome) : null;
+                      
+                      if (corMalha && corGrade && corMalha !== corGrade) {
+                        mensagens.push(`Malha (${corMalha})`);
+                      }
+                      if (corRibana && corGrade && corRibana !== corGrade) {
+                        mensagens.push(`Ribana (${corRibana})`);
+                      }
+                    }
+                  });
+                  setMensagensErroCor(mensagens);
+                }}
                 loading={loadingMalhas}
                 getOptionLabel={(option) => option.nome}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -505,7 +530,26 @@ const NovaOrdemProducao = () => {
               <Autocomplete
                 options={ribanas}
                 value={ribanaSelecionada}
-                onChange={(_, newValue) => setRibanaSelecionada(newValue)}
+                onChange={(_, newValue) => {
+                  setRibanaSelecionada(newValue);
+                  // Verifica todas as grades existentes
+                  const mensagens: string[] = [];
+                  Object.values(grades).forEach(grade => {
+                    if (grade.nome) {
+                      const corGrade = extrairCodigoCor(grade.nome);
+                      const corMalha = malhaSelecionada ? extrairCodigoCor(malhaSelecionada.nome) : null;
+                      const corRibana = newValue ? extrairCodigoCor(newValue.nome) : null;
+                      
+                      if (corMalha && corGrade && corMalha !== corGrade) {
+                        mensagens.push(`Malha (${corMalha})`);
+                      }
+                      if (corRibana && corGrade && corRibana !== corGrade) {
+                        mensagens.push(`Ribana (${corRibana})`);
+                      }
+                    }
+                  });
+                  setMensagensErroCor(mensagens);
+                }}
                 loading={loadingRibanas}
                 getOptionLabel={(option) => option.nome}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -575,6 +619,19 @@ const NovaOrdemProducao = () => {
                   onChange={(_, newValue) => {
                     console.log('Novo valor selecionado na grade:', newValue);
                     if (newValue) {
+                      const corGrade = extrairCodigoCor(newValue.nome);
+                      const corMalha = malhaSelecionada ? extrairCodigoCor(malhaSelecionada.nome) : null;
+                      const corRibana = ribanaSelecionada ? extrairCodigoCor(ribanaSelecionada.nome) : null;
+                      
+                      const mensagens: string[] = [];
+                      if (corMalha && corGrade && corMalha !== corGrade) {
+                        mensagens.push(`Malha (${corMalha})`);
+                      }
+                      if (corRibana && corGrade && corRibana !== corGrade) {
+                        mensagens.push(`Ribana (${corRibana})`);
+                      }
+                      setMensagensErroCor(mensagens);
+
                       setGrades(prevGrades => ({
                         ...prevGrades,
                         [gradeId]: {
@@ -585,6 +642,7 @@ const NovaOrdemProducao = () => {
                         }
                       }));
                     } else {
+                      setMensagensErroCor([]);
                       setGrades(prevGrades => ({
                         ...prevGrades,
                         [gradeId]: {
@@ -634,9 +692,14 @@ const NovaOrdemProducao = () => {
                       }}
                     />
                   )}
-                />
-              </Grid>
-              <Grid item xs={12} md={2}>
+                  />
+                  {mensagensErroCor.length > 0 && (
+                    <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
+                      A cor do Item Grade é diferente de: {mensagensErroCor.join(' e ')}
+                    </Typography>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={2}>
                 <TextField
                   label="Quantidade Prevista"
                   type="number"

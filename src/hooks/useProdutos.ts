@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../config/firebase';
-import { sortBySize } from '../utils/sorting';
+import { useSorting } from './useSorting';
 
 interface Produto {
   id: string;
@@ -16,17 +16,6 @@ interface Produto {
   tipo: string;
   idProdutoPai?: string;
 }
-
-// Adiciona logs para debug
-const logProduto = (produto: Produto) => {
-  console.log('Produto processado:', {
-    id: produto.id,
-    nome: produto.nome,
-    codigo: produto.codigo,
-    idProdutoPai: produto.idProdutoPai
-  });
-  return produto;
-};
 
 export const useProdutos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -45,9 +34,7 @@ export const useProdutos = () => {
             id,
             ...(produto as Omit<Produto, 'id'>)
           }));
-          // Ordena a lista de produtos pelo formato (tamanho)
-          const sortedList = sortBySize(produtosList, 'formato');
-          setProdutos(sortedList);
+          setProdutos(produtosList);
         } else {
           setProdutos([]);
         }
@@ -67,5 +54,8 @@ export const useProdutos = () => {
     return () => unsubscribe();
   }, []);
 
-  return { produtos, loading, error };
+  // Aplica a ordenação nos produtos
+  const produtosOrdenados = useSorting(produtos, { key: 'nome' });
+
+  return { produtos: produtosOrdenados, loading, error };
 };
