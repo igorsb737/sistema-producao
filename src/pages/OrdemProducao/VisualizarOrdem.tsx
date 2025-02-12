@@ -160,6 +160,55 @@ function VisualizarOrdem() {
               ))}
             </Box>
           </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, mt: 2 }}>
+              Entregas
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {Object.entries(ordem.grades).map(([gradeId, grade]) => {
+                if (!grade.recebimentos || grade.recebimentos.length === 0) return null;
+
+                const subtotalGrade = grade.recebimentos.reduce((acc, rec) => acc + rec.quantidade, 0);
+
+                return (
+                  <Paper key={`entrega-${gradeId}`} variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                      Grade: {grade.nome}
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+                      {grade.recebimentos.map((recebimento, index) => (
+                        <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography>
+                            Data: {recebimento.data}
+                          </Typography>
+                          <Typography>
+                            Quantidade: {recebimento.quantidade} unidades
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+
+                    <Typography variant="subtitle2" sx={{ textAlign: 'right' }}>
+                      Subtotal da Grade: {subtotalGrade} unidades
+                    </Typography>
+                  </Paper>
+                );
+              })}
+            </Box>
+
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Typography variant="h6">
+                Total Geral: {
+                  Object.values(ordem.grades).reduce((total, grade) => {
+                    if (!grade.recebimentos) return total;
+                    return total + grade.recebimentos.reduce((acc, rec) => acc + rec.quantidade, 0);
+                  }, 0)
+                } unidades
+              </Typography>
+            </Box>
+          </Grid>
         </Grid>
       </Paper>
     </Box>

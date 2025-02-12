@@ -69,7 +69,7 @@ function OrdemProducaoPage() {
             startIcon={<AddIcon />}
             onClick={() => navigate('/ordens/nova')}
           >
-            Nova Ordem
+            Nova Produção
           </Button>
         </Box>
       </Box>

@@ -300,7 +300,7 @@ const NovaOrdemProducao = () => {
             Salvar como Rascunho
           </Button>
           <Button type="submit" variant="contained" color="primary">
-            Salvar Ordem
+            Iniciar Produção
           </Button>
         </Box>
       </Box>
