@@ -6,6 +6,8 @@ import NovaOrdem from '../pages/OrdemProducao/NovaOrdem';
 import VisualizarOrdem from '../pages/OrdemProducao/VisualizarOrdem';
 import RecebimentoMercadoria from '../pages/OrdemProducao/RecebimentoMercadoria';
 import RecebimentoMercadoriaDetalhes from '../pages/OrdemProducao/RecebimentoMercadoriaDetalhes';
+import PagamentoOrdens from '../pages/OrdemProducao/PagamentoOrdens';
+import PagamentoDetalhes from '../pages/OrdemProducao/PagamentoDetalhes';
 import Configuracoes from '../pages/Configuracoes';
 import Registros from '../pages/Registros';
 
@@ -41,6 +43,14 @@ const router = createBrowserRouter([
       {
         path: 'ordens/recebimento/detalhes',
         element: <RecebimentoMercadoriaDetalhes />,
+      },
+      {
+        path: 'ordens/pagamento',
+        element: <PagamentoOrdens />,
+      },
+      {
+        path: 'ordens/pagamento/detalhes',
+        element: <PagamentoDetalhes />,
       },
       {
         path: 'configuracoes',

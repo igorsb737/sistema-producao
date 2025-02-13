@@ -5,6 +5,7 @@ import { database } from '../config/firebase';
 interface Fornecedor {
   id: string;
   nome: string;
+  situacao: string;
 }
 
 export const useFornecedores = () => {
