@@ -8,6 +8,7 @@ import RecebimentoMercadoria from '../pages/OrdemProducao/RecebimentoMercadoria'
 import RecebimentoMercadoriaDetalhes from '../pages/OrdemProducao/RecebimentoMercadoriaDetalhes';
 import PagamentoOrdens from '../pages/OrdemProducao/PagamentoOrdens';
 import PagamentoDetalhes from '../pages/OrdemProducao/PagamentoDetalhes';
+import ConciliacaoPagamentos from '../pages/OrdemProducao/ConciliacaoPagamentos';
 import Configuracoes from '../pages/Configuracoes';
 import Registros from '../pages/Registros';
 
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: 'ordens/pagamento/detalhes',
         element: <PagamentoDetalhes />,
+      },
+      {
+        path: 'ordens/pagamento/conciliacao',
+        element: <ConciliacaoPagamentos />,
       },
       {
         path: 'configuracoes',

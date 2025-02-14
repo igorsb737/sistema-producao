@@ -12,6 +12,7 @@ import {
   TableHead,
   TableRow,
   Chip,
+  Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
@@ -62,10 +63,16 @@ function PagamentoOrdens() {
 
   return (
     <Box>
-      <Box sx={{ mb: 1.5, mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, mt: 2 }}>
         <Typography variant="h5">
           Pagamento de Fornecedores
         </Typography>
+        <Button
+          variant="contained"
+          onClick={() => navigate('/ordens/pagamento/conciliacao')}
+        >
+          CONCILIAÇÃO
+        </Button>
       </Box>
 
       {loading ? (
