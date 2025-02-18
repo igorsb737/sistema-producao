@@ -126,8 +126,16 @@ function PagamentoDetalhes() {
     }
   }, [ordens, searchParams]);
 
-  const handleAddLancamento = () => {
-    setLancamentos([...lancamentos, { ...lancamentoInicial }]);
+  const handleAddLancamento = (index?: number) => {
+    if (typeof index === 'number') {
+      // Adiciona após o índice especificado
+      const novosLancamentos = [...lancamentos];
+      novosLancamentos.splice(index + 1, 0, { ...lancamentoInicial });
+      setLancamentos(novosLancamentos);
+    } else {
+      // Adiciona ao final
+      setLancamentos([...lancamentos, { ...lancamentoInicial }]);
+    }
   };
 
   const handleRemoveLancamento = (index: number) => {
@@ -325,7 +333,7 @@ function PagamentoDetalhes() {
           <Typography variant="h6">Lançamentos</Typography>
           <Button
             startIcon={<AddIcon />}
-            onClick={handleAddLancamento}
+            onClick={() => handleAddLancamento()}
             variant="outlined"
             size="small"
           >
@@ -342,7 +350,7 @@ function PagamentoDetalhes() {
                 <TableCell>Valor (R$)</TableCell>
                 <TableCell>Quantidade</TableCell>
                 <TableCell>Total</TableCell>
-                <TableCell width={50} />
+                  <TableCell width={100} />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -450,13 +458,25 @@ function PagamentoDetalhes() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRemoveLancamento(index)}
-                      disabled={lancamentos.length === 1}
-                    >
-                      <RemoveIcon />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddLancamento(index);
+                        }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveLancamento(index)}
+                        disabled={lancamentos.length === 1}
+                        tabIndex={-1}
+                      >
+                        <RemoveIcon />
+                      </IconButton>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}

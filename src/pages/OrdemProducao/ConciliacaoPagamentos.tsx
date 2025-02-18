@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePagamentos } from '../../hooks/usePagamentos';
 import { useFornecedores } from '../../hooks/useFornecedores';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { useServicos } from '../../hooks/useServicos';
 import {
   Box,
   Typography,
@@ -33,6 +34,7 @@ interface LancamentoSelecionado {
   lancamentoIndex: number;
   valor: number;
   quantidade: number;
+  servicoId: string;
   checked: boolean;
 }
 
@@ -41,6 +43,7 @@ function ConciliacaoPagamentos() {
   const { fornecedores } = useFornecedores();
   const { ordens } = useOrdemProducao();
   const { buscarPagamentosPorFornecedor, criarConciliacao } = usePagamentos();
+  const { servicos, getServicoById } = useServicos();
 
   const [fornecedorId, setFornecedorId] = useState('');
   const [dataPagamento, setDataPagamento] = useState<Date | null>(null);
@@ -65,6 +68,7 @@ function ConciliacaoPagamentos() {
             lancamentoIndex: index,
             valor: Number(lancamento.total) || 0,
             quantidade: Number(lancamento.quantidade) || 0,
+            servicoId: lancamento.servicoId,
             checked: false,
           }))
         );
@@ -108,12 +112,13 @@ function ConciliacaoPagamentos() {
       await criarConciliacao(
         fornecedorId,
         format(dataPagamento, 'dd-MM-yyyy'),
-        lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor, quantidade }) => ({
+        lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor, quantidade, servicoId }) => ({
           ordemId,
           pagamentoId,
           lancamentoIndex,
           valor,
           quantidade,
+          servicoId,
         }))
       );
 
@@ -237,6 +242,7 @@ function ConciliacaoPagamentos() {
                 </TableCell>
                 <TableCell>Número</TableCell>
                 <TableCell>Item</TableCell>
+                <TableCell>Tipo de Serviço</TableCell>
                 <TableCell>Cliente</TableCell>
                 <TableCell>Data Entrega</TableCell>
                 <TableCell align="right">Valor</TableCell>
@@ -245,13 +251,13 @@ function ConciliacaoPagamentos() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={7} align="center">
                     Carregando lançamentos...
                   </TableCell>
                 </TableRow>
               ) : lancamentos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={7} align="center">
                     {fornecedorId
                       ? "Nenhum lançamento encontrado"
                       : "Selecione um fornecedor para ver os lançamentos"}
@@ -274,6 +280,9 @@ function ConciliacaoPagamentos() {
                       </TableCell>
                       <TableCell>{ordemInfo.numero}</TableCell>
                       <TableCell>{ordemInfo.item}</TableCell>
+                      <TableCell>
+                        {getServicoById(lancamento.servicoId)?.nome || 'N/A'}
+                      </TableCell>
                       <TableCell>{ordemInfo.cliente}</TableCell>
                       <TableCell>{ordemInfo.dataEntrega}</TableCell>
                       <TableCell align="right">

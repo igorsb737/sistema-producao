@@ -34,16 +34,8 @@ function PagamentoOrdens() {
           const pagamentos = await buscarPagamentos(ordem.id);
           totaisPag[ordem.id] = calcularTotalPago(pagamentos);
           
-          // Calcula totais conciliados a partir dos pagamentos
-          totaisConc[ordem.id] = pagamentos.reduce((acc, pagamento) => {
-            if (pagamento.conciliacao) {
-              return {
-                quantidade: acc.quantidade + pagamento.conciliacao.lancamentosSelecionados.length,
-                valor: acc.valor + pagamento.conciliacao.total
-              };
-            }
-            return acc;
-          }, { quantidade: 0, valor: 0 });
+          // Busca totais conciliados usando o método do hook
+          totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
         }
       }
       
@@ -54,7 +46,7 @@ function PagamentoOrdens() {
     if (ordens.length > 0) {
       carregarDados();
     }
-  }, [ordens, buscarPagamentos, calcularTotalPago]);
+  }, [ordens, buscarPagamentos, calcularTotalPago, buscarTotaisConciliados]);
 
   // Filtra apenas ordens com status "Em Entrega"
   const ordensDisponiveis = ordens.filter(
