@@ -32,6 +32,7 @@ interface LancamentoSelecionado {
   pagamentoId: string;
   lancamentoIndex: number;
   valor: number;
+  quantidade: number;
   checked: boolean;
 }
 
@@ -63,6 +64,7 @@ function ConciliacaoPagamentos() {
             pagamentoId: pagamento.id,
             lancamentoIndex: index,
             valor: Number(lancamento.total) || 0,
+            quantidade: Number(lancamento.quantidade) || 0,
             checked: false,
           }))
         );
@@ -106,11 +108,12 @@ function ConciliacaoPagamentos() {
       await criarConciliacao(
         fornecedorId,
         format(dataPagamento, 'dd-MM-yyyy'),
-        lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor }) => ({
+        lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor, quantidade }) => ({
           ordemId,
           pagamentoId,
           lancamentoIndex,
           valor,
+          quantidade,
         }))
       );
 

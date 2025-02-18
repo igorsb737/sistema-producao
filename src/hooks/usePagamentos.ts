@@ -20,6 +20,7 @@ export interface ConciliacaoPagamento {
   lancamentosSelecionados: Array<{
     index: number;
     valor: number;
+    quantidade: number;
   }>;
 }
 
@@ -152,6 +153,7 @@ export const usePagamentos = () => {
       pagamentoId: string;
       lancamentoIndex: number;
       valor: number;
+      quantidade: number;
     }>
   ): Promise<void> => {
     try {
@@ -176,13 +178,14 @@ export const usePagamentos = () => {
         }
         acc[key].lancamentos.push({
           index: lancamento.lancamentoIndex,
-          valor: lancamento.valor
+          valor: lancamento.valor,
+          quantidade: lancamento.quantidade
         });
         return acc;
       }, {} as Record<string, {
         ordemId: string;
         pagamentoId: string;
-        lancamentos: Array<{index: number; valor: number}>;
+        lancamentos: Array<{index: number; valor: number; quantidade: number}>;
       }>);
 
       // Atualizar cada pagamento com sua conciliação
@@ -259,7 +262,7 @@ export const usePagamentos = () => {
       const totais = pagamentos.reduce((acc, pagamento) => {
         if (pagamento.conciliacao) {
           return {
-            quantidade: acc.quantidade + pagamento.conciliacao.lancamentosSelecionados.length,
+            quantidade: acc.quantidade + pagamento.conciliacao.lancamentosSelecionados.reduce((sum, lanc) => sum + (lanc.quantidade || 0), 0),
             valor: acc.valor + pagamento.conciliacao.total
           };
         }
