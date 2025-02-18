@@ -15,6 +15,7 @@ import {
   Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { Assessment as AssessmentIcon } from '@mui/icons-material';
 
 function PagamentoOrdens() {
   const navigate = useNavigate();
@@ -73,12 +74,21 @@ function PagamentoOrdens() {
         <Typography variant="h5">
           Pagamento de Fornecedores
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => navigate('/ordens/pagamento/conciliacao')}
-        >
-          CONCILIAÇÃO
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<AssessmentIcon />}
+            onClick={() => navigate('/ordens/pagamento/relatorio-conciliacoes')}
+          >
+            Relatório de Conciliações
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/ordens/pagamento/conciliacao')}
+          >
+            CONCILIAÇÃO
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (

@@ -26,7 +26,7 @@ import {
   InputLabel,
   Grid,
 } from '@mui/material';
-import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import { Add as AddIcon, Remove as RemoveIcon, Assessment as AssessmentIcon } from '@mui/icons-material';
 
 interface NovoLancamento extends Omit<Lancamento, 'data'> {
   fornecedorId: string;
