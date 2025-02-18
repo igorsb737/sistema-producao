@@ -19,26 +19,40 @@ import { useNavigate } from 'react-router-dom';
 function PagamentoOrdens() {
   const navigate = useNavigate();
   const { ordens, loading, error } = useOrdemProducao();
-  const { buscarPagamentos, calcularTotalPago } = usePagamentos();
+  const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});
+  const [totaisConciliados, setTotaisConciliados] = useState<Record<string, { quantidade: number; valor: number }>>({});
 
   // Carrega os pagamentos para cada ordem
   useEffect(() => {
-    const carregarPagamentos = async () => {
-      const totais: Record<string, { quantidade: number; valor: number }> = {};
+    const carregarDados = async () => {
+      const totaisPag: Record<string, { quantidade: number; valor: number }> = {};
+      const totaisConc: Record<string, { quantidade: number; valor: number }> = {};
       
       for (const ordem of ordens) {
         if (ordem.informacoesGerais.status === 'Em Entrega') {
           const pagamentos = await buscarPagamentos(ordem.id);
-          totais[ordem.id] = calcularTotalPago(pagamentos);
+          totaisPag[ordem.id] = calcularTotalPago(pagamentos);
+          
+          // Calcula totais conciliados a partir dos pagamentos
+          totaisConc[ordem.id] = pagamentos.reduce((acc, pagamento) => {
+            if (pagamento.conciliacao) {
+              return {
+                quantidade: acc.quantidade + pagamento.conciliacao.lancamentosSelecionados.length,
+                valor: acc.valor + pagamento.conciliacao.total
+              };
+            }
+            return acc;
+          }, { quantidade: 0, valor: 0 });
         }
       }
       
-      setTotaisPagos(totais);
+      setTotaisPagos(totaisPag);
+      setTotaisConciliados(totaisConc);
     };
 
     if (ordens.length > 0) {
-      carregarPagamentos();
+      carregarDados();
     }
   }, [ordens, buscarPagamentos, calcularTotalPago]);
 
@@ -97,6 +111,8 @@ function PagamentoOrdens() {
                 <TableCell>Total Entregue</TableCell>
                 <TableCell>Total Lançado</TableCell>
                 <TableCell>Valor Total Lançado</TableCell>
+                <TableCell>Total Conciliado</TableCell>
+                <TableCell>Valor Total Conciliado</TableCell>
                 <TableCell>Status</TableCell>
               </TableRow>
             </TableHead>
@@ -125,6 +141,23 @@ function PagamentoOrdens() {
                     <TableCell>{totaisPagos[ordem.id]?.quantidade || 0}</TableCell>
                     <TableCell>
                       R$ {(totaisPagos[ordem.id]?.valor || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell>{totaisConciliados[ordem.id]?.quantidade || 0}</TableCell>
+                    <TableCell>
+                      {totaisConciliados[ordem.id]?.valor ? (
+                        <Button
+                          variant="text"
+                          color="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/ordens/pagamento/conciliacao/detalhes?ordem=${ordem.id}&pagamento=${ordem.id}`);
+                          }}
+                        >
+                          R$ {totaisConciliados[ordem.id].valor.toFixed(2)}
+                        </Button>
+                      ) : (
+                        'R$ 0,00'
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip

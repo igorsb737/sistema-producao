@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
-import { usePagamentos, Lancamento } from '../../hooks/usePagamentos';
+import { usePagamentos } from '../../hooks/usePagamentos';
+import type { Lancamento } from '../../hooks/usePagamentos';
 import { useFornecedores } from '../../hooks/useFornecedores';
 import { format } from 'date-fns';
 import { ref, get } from 'firebase/database';
@@ -60,6 +61,7 @@ function PagamentoDetalhes() {
   }>>([]);
   const [totalEntregue, setTotalEntregue] = useState(0);
   const [totalPago, setTotalPago] = useState(0);
+  const [pagamentosExistentes, setPagamentosExistentes] = useState<Array<any>>([]);
 
   // Carrega os serviços do Firebase
   useEffect(() => {
@@ -119,6 +121,7 @@ function PagamentoDetalhes() {
       buscarPagamentos(ordemEncontrada.id).then((pagamentos) => {
         const { quantidade } = calcularTotalPago(pagamentos);
         setTotalPago(quantidade);
+        setPagamentosExistentes(pagamentos);
       });
     }
   }, [ordens, searchParams]);
@@ -234,6 +237,63 @@ function PagamentoDetalhes() {
           </Button>
         </Box>
       </Box>
+
+      {/* Pagamentos Existentes */}
+      {pagamentosExistentes.length > 0 && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>Pagamentos Existentes</Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Data</TableCell>
+                  <TableCell>Fornecedor</TableCell>
+                  <TableCell>Serviço</TableCell>
+                  <TableCell>Quantidade</TableCell>
+                  <TableCell>Valor</TableCell>
+                  <TableCell>Total</TableCell>
+                  <TableCell>Status Conciliação</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pagamentosExistentes.map((pagamento) => (
+                  pagamento.lancamentos.map((lancamento: any, index: number) => {
+                    const fornecedor = fornecedores.find(f => f.id === lancamento.fornecedorId);
+                    const servico = servicos.find(s => s.id === lancamento.servicoId);
+                    
+                    return (
+                      <TableRow 
+                        key={`${pagamento.id}-${index}`}
+                        sx={pagamento.conciliacao ? {
+                          backgroundColor: 'rgba(76, 175, 80, 0.08)'
+                        } : undefined}
+                      >
+                        <TableCell>{lancamento.data}</TableCell>
+                        <TableCell>{fornecedor?.nome || 'N/A'}</TableCell>
+                        <TableCell>{servico?.nome || 'N/A'}</TableCell>
+                        <TableCell align="right">{lancamento.quantidade}</TableCell>
+                        <TableCell align="right">R$ {lancamento.valor.toFixed(2)}</TableCell>
+                        <TableCell align="right">R$ {lancamento.total.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {pagamento.conciliacao ? (
+                            <Button
+                              variant="text"
+                              color="primary"
+                              onClick={() => navigate(`/ordens/pagamento/conciliacao/detalhes?ordem=${ordem.id}&pagamento=${pagamento.id}`)}
+                            >
+                              {pagamento.conciliacao.status} ({pagamento.conciliacao.dataPagamento})
+                            </Button>
+                          ) : 'Não conciliado'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       {/* Box de informações da OP */}
       <Paper sx={{ p: 2, mb: 2 }}>

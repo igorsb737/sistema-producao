@@ -2,12 +2,6 @@ import { useState, useEffect } from 'react';
 import { ref, get, set, push, child } from 'firebase/database';
 import { database } from '../config/firebase';
 
-export interface Conciliacao {
-  id: string;
-  data: string;
-  status: 'Pendente' | 'Enviado' | 'Pago';
-}
-
 export interface Lancamento {
   fornecedorId: string;
   servicoId: string;
@@ -16,27 +10,28 @@ export interface Lancamento {
   total: number;
   data: string;
   afetaEstoque?: boolean;
-  conciliacao?: Conciliacao;
+}
+
+export interface ConciliacaoPagamento {
+  dataPagamento: string;
+  dataConciliacao: string;
+  status: 'Pendente' | 'Enviado' | 'Pago';
+  total: number;
+  lancamentosSelecionados: Array<{
+    index: number;
+    valor: number;
+  }>;
 }
 
 export interface Pagamento {
   id: string;
   lancamentos: Lancamento[];
+  conciliacao?: ConciliacaoPagamento;
 }
 
-export interface ConciliacaoCompleta {
-  id: string;
-  fornecedorId: string;
-  dataPagamento: string;
-  dataConciliacao: string;
-  status: 'Pendente' | 'Enviado' | 'Pago';
-  lancamentos: {
-    ordemId: string;
-    pagamentoId: string;
-    lancamentoIndex: number;
-    valor: number;
-  }[];
-  total: number;
+interface TotaisConciliados {
+  quantidade: number;
+  valor: number;
 }
 
 export const usePagamentos = () => {
@@ -59,10 +54,7 @@ export const usePagamentos = () => {
       }));
 
       if (apenasNaoConciliados) {
-        return pagamentos.map(pagamento => ({
-          ...pagamento,
-          lancamentos: pagamento.lancamentos.filter(l => !l.conciliacao)
-        })).filter(p => p.lancamentos.length > 0);
+        return pagamentos.filter(pagamento => !pagamento.conciliacao);
       }
 
       return pagamentos;
@@ -114,36 +106,34 @@ export const usePagamentos = () => {
 
       const pagamentosPorFornecedor: Array<{ordemId: string; pagamento: Pagamento}> = [];
       
-      const ordensData = snapshot.val() as Record<string, {
-        pagamentos?: Record<string, {
-          lancamentos: Lancamento[];
-        }>;
-      }>;
+      const ordensData = snapshot.val();
       
-      for (const [ordemId, ordem] of Object.entries(ordensData)) {
-        if (ordem?.pagamentos) {
-          const pagamentosOrdem = Object.entries(ordem.pagamentos)
-            .map(([id, pagamento]) => ({
-              id,
-              ...(pagamento as Omit<Pagamento, 'id'>),
-            }))
-            .filter(pagamento => 
-              pagamento.lancamentos.some(l => 
-                l.fornecedorId === fornecedorId && !l.conciliacao
-              )
-            );
+      for (const [ordemId, ordem] of Object.entries<any>(ordensData)) {
+        if (ordem && typeof ordem === 'object' && 'pagamentos' in ordem) {
+          const pagamentos = ordem.pagamentos;
+          
+          if (pagamentos && typeof pagamentos === 'object') {
+            for (const [pagamentoId, pagamento] of Object.entries<any>(pagamentos)) {
+              if (pagamento && Array.isArray(pagamento.lancamentos)) {
+                const temLancamentosFornecedor = pagamento.lancamentos.some(
+                  (l: Lancamento) => l.fornecedorId === fornecedorId
+                );
 
-          pagamentosOrdem.forEach(pagamento => {
-            pagamentosPorFornecedor.push({
-              ordemId,
-              pagamento: {
-                ...pagamento,
-                lancamentos: pagamento.lancamentos.filter(
-                  l => l.fornecedorId === fornecedorId && !l.conciliacao
-                )
+                if (temLancamentosFornecedor && !pagamento.conciliacao) {
+                  pagamentosPorFornecedor.push({
+                    ordemId,
+                    pagamento: {
+                      id: pagamentoId,
+                      lancamentos: pagamento.lancamentos.filter(
+                        (l: Lancamento) => l.fornecedorId === fornecedorId
+                      ),
+                      conciliacao: pagamento.conciliacao
+                    }
+                  });
+                }
               }
-            });
-          });
+            }
+          }
         }
       }
 
@@ -163,13 +153,8 @@ export const usePagamentos = () => {
       lancamentoIndex: number;
       valor: number;
     }>
-  ): Promise<string> => {
+  ): Promise<void> => {
     try {
-      // Criar nova conciliação
-      const conciliacoesRef = ref(database, 'conciliacoes');
-      const novaConciliacaoRef = push(conciliacoesRef);
-      const conciliacaoId = novaConciliacaoRef.key!;
-      
       const dataConciliacao = new Date().toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -179,43 +164,51 @@ export const usePagamentos = () => {
         second: '2-digit'
       }).replace(/\//g, '-');
 
-      const conciliacao: ConciliacaoCompleta = {
-        id: conciliacaoId,
-        fornecedorId,
-        dataPagamento,
-        dataConciliacao,
-        status: 'Pendente',
-        lancamentos: lancamentosSelecionados,
-        total: lancamentosSelecionados.reduce((acc, l) => acc + l.valor, 0)
-      };
+      // Agrupar lançamentos por ordem e pagamento
+      const lancamentosPorPagamento = lancamentosSelecionados.reduce((acc, lancamento) => {
+        const key = `${lancamento.ordemId}/${lancamento.pagamentoId}`;
+        if (!acc[key]) {
+          acc[key] = {
+            ordemId: lancamento.ordemId,
+            pagamentoId: lancamento.pagamentoId,
+            lancamentos: []
+          };
+        }
+        acc[key].lancamentos.push({
+          index: lancamento.lancamentoIndex,
+          valor: lancamento.valor
+        });
+        return acc;
+      }, {} as Record<string, {
+        ordemId: string;
+        pagamentoId: string;
+        lancamentos: Array<{index: number; valor: number}>;
+      }>);
 
-      // Salvar conciliação
-      await set(novaConciliacaoRef, conciliacao);
-
-      // Atualizar lançamentos com a conciliação
-      for (const lancamento of lancamentosSelecionados) {
-        const lancamentoRef = ref(
+      // Atualizar cada pagamento com sua conciliação
+      for (const { ordemId, pagamentoId, lancamentos } of Object.values(lancamentosPorPagamento)) {
+        const pagamentoRef = ref(
           database,
-          `ordens/${lancamento.ordemId}/pagamentos/${lancamento.pagamentoId}/lancamentos/${lancamento.lancamentoIndex}`
+          `ordens/${ordemId}/pagamentos/${pagamentoId}`
         );
 
-        const conciliacaoInfo: Conciliacao = {
-          id: conciliacaoId,
-          data: dataConciliacao,
-          status: 'Pendente'
+        const conciliacao: ConciliacaoPagamento = {
+          dataPagamento,
+          dataConciliacao,
+          status: 'Pendente',
+          total: lancamentos.reduce((sum, l) => sum + l.valor, 0),
+          lancamentosSelecionados: lancamentos
         };
 
-        const snapshot = await get(lancamentoRef);
+        const snapshot = await get(pagamentoRef);
         if (snapshot.exists()) {
-          const lancamentoAtual = snapshot.val();
-          await set(lancamentoRef, {
-            ...lancamentoAtual,
-            conciliacao: conciliacaoInfo
+          const pagamentoAtual = snapshot.val();
+          await set(pagamentoRef, {
+            ...pagamentoAtual,
+            conciliacao
           });
         }
       }
-
-      return conciliacaoId;
     } catch (err) {
       console.error('Erro ao criar conciliação:', err);
       throw new Error('Erro ao criar conciliação');
@@ -223,37 +216,60 @@ export const usePagamentos = () => {
   };
 
   const atualizarStatusConciliacao = async (
-    conciliacaoId: string,
+    ordemId: string,
+    pagamentoId: string,
     novoStatus: 'Pendente' | 'Enviado' | 'Pago'
   ) => {
     try {
-      // Atualizar status na conciliação
-      const conciliacaoRef = ref(database, `conciliacoes/${conciliacaoId}`);
-      const snapshot = await get(conciliacaoRef);
+      const pagamentoRef = ref(
+        database,
+        `ordens/${ordemId}/pagamentos/${pagamentoId}`
+      );
       
+      const snapshot = await get(pagamentoRef);
       if (snapshot.exists()) {
-        const conciliacao = snapshot.val() as ConciliacaoCompleta;
-        await set(conciliacaoRef, {
-          ...conciliacao,
-          status: novoStatus
-        });
-
-        // Atualizar status em todos os lançamentos vinculados
-        for (const lancamento of conciliacao.lancamentos) {
-          const lancamentoRef = ref(
-            database,
-            `ordens/${lancamento.ordemId}/pagamentos/${lancamento.pagamentoId}/lancamentos/${lancamento.lancamentoIndex}/conciliacao`
-          );
-          await set(lancamentoRef, {
-            id: conciliacaoId,
-            data: conciliacao.dataConciliacao,
-            status: novoStatus
+        const pagamento = snapshot.val() as Pagamento;
+        if (pagamento.conciliacao) {
+          await set(pagamentoRef, {
+            ...pagamento,
+            conciliacao: {
+              ...pagamento.conciliacao,
+              status: novoStatus
+            }
           });
         }
       }
     } catch (err) {
       console.error('Erro ao atualizar status da conciliação:', err);
       throw new Error('Erro ao atualizar status da conciliação');
+    }
+  };
+
+  const buscarTotaisConciliados = async (ordemId: string): Promise<TotaisConciliados> => {
+    try {
+      const pagamentosRef = ref(database, `ordens/${ordemId}/pagamentos`);
+      const snapshot = await get(pagamentosRef);
+      
+      if (!snapshot.exists()) {
+        return { quantidade: 0, valor: 0 };
+      }
+
+      const pagamentos = Object.values(snapshot.val() as Record<string, Pagamento>);
+      
+      const totais = pagamentos.reduce((acc, pagamento) => {
+        if (pagamento.conciliacao) {
+          return {
+            quantidade: acc.quantidade + pagamento.conciliacao.lancamentosSelecionados.length,
+            valor: acc.valor + pagamento.conciliacao.total
+          };
+        }
+        return acc;
+      }, { quantidade: 0, valor: 0 });
+
+      return totais;
+    } catch (err) {
+      console.error('Erro ao buscar totais conciliados:', err);
+      return { quantidade: 0, valor: 0 };
     }
   };
 
@@ -266,5 +282,6 @@ export const usePagamentos = () => {
     buscarPagamentosPorFornecedor,
     criarConciliacao,
     atualizarStatusConciliacao,
+    buscarTotaisConciliados,
   };
 };

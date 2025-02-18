@@ -42,40 +42,22 @@ function ConciliacaoPagamentos() {
   const { buscarPagamentosPorFornecedor, criarConciliacao } = usePagamentos();
 
   const [fornecedorId, setFornecedorId] = useState('');
-  const [dataEntrega, setDataEntrega] = useState<Date | null>(null);
   const [dataPagamento, setDataPagamento] = useState<Date | null>(null);
   const [lancamentos, setLancamentos] = useState<LancamentoSelecionado[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const carregarLancamentos = useCallback(async () => {
-    if (!fornecedorId) {
+  const carregarLancamentos = useCallback(async (fornecedorIdParam?: string) => {
+    const idToUse = fornecedorIdParam || fornecedorId;
+    if (!idToUse) {
       setLancamentos([]);
       return;
     }
 
     setLoading(true);
     try {
-      const pagamentos = await buscarPagamentosPorFornecedor(fornecedorId);
+      const pagamentos = await buscarPagamentosPorFornecedor(idToUse);
       
-      const lancamentosFiltrados = pagamentos
-        .filter(({ ordemId }) => {
-          if (!dataEntrega || !isValid(dataEntrega)) return true;
-          const ordem = ordens.find(o => o.id === ordemId);
-          if (!ordem?.informacoesGerais?.dataEntrega) return false;
-          
-          try {
-            const dataEntregaOrdem = parse(
-              ordem.informacoesGerais.dataEntrega,
-              'dd-MM-yyyy',
-              new Date()
-            );
-            return isValid(dataEntregaOrdem) && 
-                   dataEntregaOrdem.getTime() === dataEntrega.getTime();
-          } catch {
-            return false;
-          }
-        })
-        .flatMap(({ ordemId, pagamento }) =>
+      const lancamentosFiltrados = pagamentos.flatMap(({ ordemId, pagamento }) =>
           (pagamento.lancamentos || []).map((lancamento, index) => ({
             ordemId,
             pagamentoId: pagamento.id,
@@ -91,21 +73,14 @@ function ConciliacaoPagamentos() {
     } finally {
       setLoading(false);
     }
-  }, [fornecedorId, dataEntrega, ordens, buscarPagamentosPorFornecedor]);
+  }, [fornecedorId, ordens, buscarPagamentosPorFornecedor]);
 
   const handleFornecedorChange = async (novoFornecedorId: string) => {
     setFornecedorId(novoFornecedorId);
     if (novoFornecedorId) {
-      await carregarLancamentos();
+      await carregarLancamentos(novoFornecedorId);
     } else {
       setLancamentos([]);
-    }
-  };
-
-  const handleDataEntregaChange = async (novaData: Date | null) => {
-    setDataEntrega(novaData);
-    if (fornecedorId) {
-      await carregarLancamentos();
     }
   };
 
@@ -139,6 +114,7 @@ function ConciliacaoPagamentos() {
         }))
       );
 
+      alert('Conciliação criada com sucesso!');
       navigate('/ordens/pagamento');
     } catch (error) {
       console.error('Erro ao criar conciliação:', error);
@@ -207,20 +183,6 @@ function ConciliacaoPagamentos() {
                   ))}
               </Select>
             </FormControl>
-
-            <DatePicker
-              label="Data de Entrega"
-              value={dataEntrega}
-              onChange={handleDataEntregaChange}
-              format="dd/MM/yyyy"
-              disabled={!fornecedorId}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  sx: { width: 200 }
-                }
-              }}
-            />
 
             <DatePicker
               label="Data de Pagamento"
