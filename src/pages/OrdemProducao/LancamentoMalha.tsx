@@ -18,6 +18,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  MenuItem,
+  Chip,
 } from '@mui/material';
 import { useOrdemProducao, OrdemProducao, Lancamento } from '../../hooks/useOrdemProducao';
 import { useLancamentoMalha } from '../../hooks/useLancamentoMalha';
@@ -29,6 +31,7 @@ export const LancamentoMalha = () => {
   const [filtroItem, setFiltroItem] = useState('');
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroDataCriacao, setFiltroDataCriacao] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('');
   const [malhaUsada, setMalhaUsada] = useState<number | undefined>(undefined);
   const [ribanaUsada, setRibanaUsada] = useState<number | undefined>(undefined);
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemProducao | null>(null);
@@ -102,10 +105,10 @@ export const LancamentoMalha = () => {
       const matchItem = ordem.solicitacao.item.nome.toLowerCase().includes(filtroItem.toLowerCase());
       const matchCliente = ordem.informacoesGerais.cliente.toLowerCase().includes(filtroCliente.toLowerCase());
       const matchData = ordem.informacoesGerais.dataInicio.includes(filtroDataCriacao);
-      const statusValido = ordem.informacoesGerais.status !== 'Finalizado';
-      const semLancamento = !ordem.lancamentoMalha;
+      const matchStatus = !filtroStatus || ordem.informacoesGerais.status === filtroStatus;
+      const statusValido = ordem.informacoesGerais.status === 'Em Entrega' || ordem.informacoesGerais.status === 'Finalizado';
 
-      return matchOrdem && matchItem && matchCliente && matchData && statusValido && semLancamento;
+      return matchOrdem && matchItem && matchCliente && matchData && matchStatus && statusValido;
     });
 
   const ordensSortedAndFiltered = getSortedItems(ordensFiltradas);
@@ -175,7 +178,7 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                 onChange={(e) => setFiltroItem(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12} sm={2}>
               <TextField
                 fullWidth
                 label="Cliente"
@@ -183,7 +186,7 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                 onChange={(e) => setFiltroCliente(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={12} sm={2}>
               <TextField
                 fullWidth
                 label="Data de Criação"
@@ -192,6 +195,19 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                 onChange={(e) => setFiltroDataCriacao(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <TextField
+                select
+                fullWidth
+                label="Status"
+                value={filtroStatus}
+                onChange={(e) => setFiltroStatus(e.target.value)}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="Em Entrega">Em Entrega</MenuItem>
+                <MenuItem value="Finalizado">Finalizado</MenuItem>
+              </TextField>
             </Grid>
           </Grid>
         </CardContent>
@@ -211,6 +227,7 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
               <TableCell>Total Camisetas Entregue</TableCell>
               <TableCell>Total Lançamentos</TableCell>
               <TableCell>Total Conciliados</TableCell>
+              <TableCell onClick={() => requestSort('status')}>Status</TableCell>
               <TableCell>Ações</TableCell>
             </TableRow>
           </TableHead>
@@ -231,6 +248,13 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                   <TableCell>{totalLancamentos}</TableCell>
                   <TableCell>{totalConciliados}</TableCell>
                   <TableCell>
+                    <Chip
+                      label={ordem.informacoesGerais.status}
+                      color={ordem.informacoesGerais.status === 'Em Entrega' ? 'primary' : 'success'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Button
                       variant="contained"
                       color="primary"
@@ -239,7 +263,7 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                         setConfirmDialogOpen(true);
                         setRendimentoAtual(null);
                       }}
-                      disabled={!validarTotais(ordem)}
+                      disabled={!validarTotais(ordem) || !!ordem.lancamentoMalha}
                     >
                       Lançar Malha
                     </Button>
