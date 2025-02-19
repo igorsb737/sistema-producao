@@ -250,7 +250,7 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                   <TableCell>
                     <Chip
                       label={ordem.informacoesGerais.status}
-                      color={ordem.informacoesGerais.status === 'Em Entrega' ? 'primary' : 'success'}
+                      color={ordem.informacoesGerais.status === 'Em Entrega' ? 'warning' : 'success'}
                       size="small"
                     />
                   </TableCell>
@@ -337,6 +337,11 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                 <Typography variant="body1" color="primary">
                   Rendimento Atual: {rendimentoAtual.toFixed(2)} peças/kg
                 </Typography>
+                {malhaUsada && ribanaUsada && (
+                  <Typography variant="body1" color="primary" sx={{ mt: 1 }}>
+                    Porcentagem de Ribana: {((ribanaUsada / malhaUsada) * 100).toFixed(1)}%
+                  </Typography>
+                )}
               </Grid>
             )}
             {error && (

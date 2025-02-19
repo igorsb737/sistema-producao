@@ -47,7 +47,18 @@ function OrdemProducaoPage() {
   });
 
   const getStatusColor = (status: string) => {
-    return status === 'Aberta' ? 'primary' : 'success';
+    switch (status) {
+      case 'Rascunho':
+        return 'default';
+      case 'Aberta':
+        return 'primary';
+      case 'Em Entrega':
+        return 'warning';
+      case 'Finalizado':
+        return 'success';
+      default:
+        return 'default';
+    }
   };
 
   return (

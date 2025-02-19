@@ -23,10 +23,12 @@ function RecebimentoMercadoria() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'Rascunho':
+        return 'default';
       case 'Aberta':
         return 'primary';
       case 'Em Entrega':
-        return 'success';
+        return 'warning';
       case 'Finalizado':
         return 'success';
       default:

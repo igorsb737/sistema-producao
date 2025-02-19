@@ -164,7 +164,7 @@ function PagamentoOrdens() {
                     <TableCell>
                       <Chip
                         label={ordem.informacoesGerais.status}
-                        color="success"
+                        color="warning"
                         size="small"
                       />
                     </TableCell>

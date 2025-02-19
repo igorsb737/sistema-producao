@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
-import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { useOrdemProducao, Status } from '../../hooks/useOrdemProducao';
 import { Box, Typography, Paper, CircularProgress, Grid, Chip } from '@mui/material';
 
 function VisualizarOrdem() {
@@ -34,7 +34,7 @@ function VisualizarOrdem() {
   }
 
   // Se a ordem estiver em rascunho, redireciona para a tela de edição
-  if (ordem.informacoesGerais.status === 'Rascunho') {
+  if (ordem.informacoesGerais.status === 'Rascunho' as Status) {
     return <Navigate to={`/ordens/editar/${ordem.informacoesGerais.numero}`} replace />;
   }
 
@@ -59,7 +59,13 @@ function VisualizarOrdem() {
             </Typography>
             <Chip 
               label={ordem.informacoesGerais.status || "-"}
-              color={ordem.informacoesGerais.status === 'Aberta' ? 'primary' : ordem.informacoesGerais.status === 'Finalizado' ? 'success' : 'default'}
+              color={
+                ordem.informacoesGerais.status === 'Rascunho' ? 'default' :
+                ordem.informacoesGerais.status === 'Aberta' ? 'primary' :
+                ordem.informacoesGerais.status === 'Em Entrega' ? 'warning' :
+                ordem.informacoesGerais.status === 'Finalizado' ? 'success' :
+                'default'
+              }
             />
           </Grid>
 
