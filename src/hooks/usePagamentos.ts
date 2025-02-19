@@ -21,6 +21,7 @@ export interface ConciliacaoPagamento {
     index: number;
     valor: number;
     quantidade: number;
+    servicoId: string;
   }>;
 }
 
@@ -154,6 +155,7 @@ export const usePagamentos = () => {
       lancamentoIndex: number;
       valor: number;
       quantidade: number;
+      servicoId: string;
     }>
   ): Promise<void> => {
     try {
@@ -179,13 +181,14 @@ export const usePagamentos = () => {
         acc[key].lancamentos.push({
           index: lancamento.lancamentoIndex,
           valor: lancamento.valor,
-          quantidade: lancamento.quantidade
+          quantidade: lancamento.quantidade,
+          servicoId: lancamento.servicoId
         });
         return acc;
       }, {} as Record<string, {
         ordemId: string;
         pagamentoId: string;
-        lancamentos: Array<{index: number; valor: number; quantidade: number}>;
+        lancamentos: Array<{index: number; valor: number; quantidade: number; servicoId: string}>;
       }>);
 
       // Atualizar cada pagamento com sua conciliação

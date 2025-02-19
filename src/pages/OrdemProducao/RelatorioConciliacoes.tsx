@@ -4,8 +4,7 @@ import { usePagamentos } from '../../hooks/usePagamentos';
 import { useFornecedores } from '../../hooks/useFornecedores';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
 import { format } from 'date-fns';
-import { ref, get } from 'firebase/database';
-import { database } from '../../config/firebase';
+import { useServicos } from '../../hooks/useServicos';
 import {
   Box,
   Typography,
@@ -59,37 +58,10 @@ function RelatorioConciliacoes() {
     dataPagamento: '',
   });
   
-  const [servicos, setServicos] = useState<Array<{
-    id: string;
-    nome: string;
-  }>>([]);
+  const { servicos, getServicoById } = useServicos();
   
   const [conciliacoes, setConciliacoes] = useState<Conciliacao[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Carrega os serviços do Firebase
-  useEffect(() => {
-    const carregarServicos = async () => {
-      try {
-        const servicosRef = ref(database, 'servicos');
-        const snapshot = await get(servicosRef);
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const servicosList = Object.entries(data)
-            .filter(([_, servico]: [string, any]) => servico.situacao === 'A')
-            .map(([id, servico]: [string, any]) => ({
-              id,
-              nome: servico.nome,
-            }));
-          setServicos(servicosList);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar serviços:', error);
-      }
-    };
-
-    carregarServicos();
-  }, []);
 
   const buscarConciliacoes = async () => {
     setLoading(true);
@@ -116,7 +88,12 @@ function RelatorioConciliacoes() {
 
           if (lancamentosFiltrados.length > 0) {
             for (const lancamento of lancamentosFiltrados) {
-              const servico = servicos.find(s => s.id === lancamento.servicoId);
+              // Encontra o lançamento selecionado correspondente na conciliação
+              const lancamentoConciliado = pagamento.conciliacao?.lancamentosSelecionados.find(
+                l => l.index === lancamentosFiltrados.indexOf(lancamento)
+              );
+              
+              const servico = getServicoById(lancamentoConciliado?.servicoId || lancamento.servicoId);
               const fornecedor = fornecedores.find(f => f.id === lancamento.fornecedorId);
               
               conciliacoesTemp.push({
