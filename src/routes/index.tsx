@@ -11,6 +11,7 @@ import PagamentoDetalhes from '../pages/OrdemProducao/PagamentoDetalhes';
 import ConciliacaoPagamentos from '../pages/OrdemProducao/ConciliacaoPagamentos';
 import ConciliacaoDetalhes from '../pages/OrdemProducao/ConciliacaoDetalhes';
 import RelatorioConciliacoes from '../pages/OrdemProducao/RelatorioConciliacoes';
+import { LancamentoMalha } from '../pages/OrdemProducao/LancamentoMalha';
 import Configuracoes from '../pages/Configuracoes';
 import Registros from '../pages/Registros';
 
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
       {
         path: 'ordens/pagamento/relatorio-conciliacoes',
         element: <RelatorioConciliacoes />,
+      },
+      {
+        path: 'ordens/lancamento-malha',
+        element: <LancamentoMalha />,
       },
       {
         path: 'configuracoes',

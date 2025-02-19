@@ -7,6 +7,30 @@ interface Recebimento {
   data: string;
 }
 
+export interface Lancamento {
+  data: string;
+  quantidade: number;
+  valor: number;
+  servicoId: string;
+}
+
+interface Conciliacao {
+  dataConciliacao: string;
+  dataPagamento: string;
+  lancamentos: {
+    [key: string]: {
+      quantidade: number;
+      valor: number;
+    };
+  };
+  lancamentosNaoConciliados: {
+    [key: string]: {
+      quantidade: number;
+      valor: number;
+    };
+  };
+}
+
 interface Grade {
   codigo: string;
   produtoId: string;
@@ -55,6 +79,10 @@ export interface OrdemProducao {
   informacoesGerais: InformacoesGerais;
   solicitacao: Solicitacao;
   grades: Grades;
+  pagamentos: {
+    [key: string]: Lancamento;
+  };
+  conciliacao: Conciliacao | null;
 }
 
 export const useOrdemProducao = () => {
@@ -90,7 +118,9 @@ export const useOrdemProducao = () => {
                 id: key,
                 informacoesGerais: ordem.informacoesGerais,
                 solicitacao: ordem.solicitacao,
-                grades: ordem.grades || {}
+                grades: ordem.grades || {},
+                pagamentos: ordem.pagamentos || {},
+                conciliacao: ordem.conciliacao || null
               };
               console.log(`Ordem ${key} processada com sucesso:`, JSON.stringify(ordemProcessada, null, 2));
               return ordemProcessada;
@@ -99,9 +129,15 @@ export const useOrdemProducao = () => {
               return null;
             }
           })
-          .filter((ordem): ordem is OrdemProducao => ordem !== null)
+          .filter((ordem): ordem is OrdemProducao => {
+            if (!ordem || !ordem.informacoesGerais || !ordem.solicitacao || !ordem.grades) {
+              return false;
+            }
+            return true;
+          })
           .sort((a, b) => {
             try {
+              if (!a || !b) return 0;
               const dateA = new Date(a.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
               const dateB = new Date(b.informacoesGerais.dataInicio.split('-').reverse().join('-')).getTime();
               return dateB - dateA;
@@ -167,13 +203,17 @@ export const useOrdemProducao = () => {
           numero: proximoNumero.toString().padStart(4, '0'),
         },
         solicitacao: ordem.solicitacao,
-        grades: ordem.grades
+        grades: ordem.grades,
+        pagamentos: {},
+        conciliacao: null
       };
 
       await set(novaOrdemRef, {
         informacoesGerais: novaOrdem.informacoesGerais,
         solicitacao: novaOrdem.solicitacao,
-        grades: novaOrdem.grades
+        grades: novaOrdem.grades,
+        pagamentos: novaOrdem.pagamentos,
+        conciliacao: novaOrdem.conciliacao
       });
       
       await carregarOrdens();
@@ -224,7 +264,9 @@ export const useOrdemProducao = () => {
             numero: ordemAtual.informacoesGerais.numero,
           },
           solicitacao: ordem.solicitacao,
-          grades: ordem.grades
+          grades: ordem.grades,
+          pagamentos: ordemAtual.pagamentos || {},
+          conciliacao: ordemAtual.conciliacao || null
         });
       }
       await carregarOrdens();
