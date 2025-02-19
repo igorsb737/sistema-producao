@@ -74,6 +74,13 @@ interface InformacoesGerais {
 
 export type Status = 'Rascunho' | 'Aberta' | 'Em Entrega' | 'Finalizado';
 
+interface LancamentoMalha {
+  malhaUsada: number;
+  ribanaUsada: number;
+  dataLancamento: string;
+  rendimento: number;
+}
+
 export interface OrdemProducao {
   id: string;
   informacoesGerais: InformacoesGerais;
@@ -83,6 +90,7 @@ export interface OrdemProducao {
     [key: string]: Lancamento;
   };
   conciliacao: Conciliacao | null;
+  lancamentoMalha: LancamentoMalha | null;
 }
 
 export const useOrdemProducao = () => {
@@ -120,7 +128,8 @@ export const useOrdemProducao = () => {
                 solicitacao: ordem.solicitacao,
                 grades: ordem.grades || {},
                 pagamentos: ordem.pagamentos || {},
-                conciliacao: ordem.conciliacao || null
+                conciliacao: ordem.conciliacao || null,
+                lancamentoMalha: ordem.lancamentoMalha || null
               };
               console.log(`Ordem ${key} processada com sucesso:`, JSON.stringify(ordemProcessada, null, 2));
               return ordemProcessada;
@@ -205,7 +214,8 @@ export const useOrdemProducao = () => {
         solicitacao: ordem.solicitacao,
         grades: ordem.grades,
         pagamentos: {},
-        conciliacao: null
+        conciliacao: null,
+        lancamentoMalha: null
       };
 
       await set(novaOrdemRef, {
@@ -213,7 +223,8 @@ export const useOrdemProducao = () => {
         solicitacao: novaOrdem.solicitacao,
         grades: novaOrdem.grades,
         pagamentos: novaOrdem.pagamentos,
-        conciliacao: novaOrdem.conciliacao
+          conciliacao: novaOrdem.conciliacao,
+          lancamentoMalha: novaOrdem.lancamentoMalha
       });
       
       await carregarOrdens();
@@ -266,7 +277,8 @@ export const useOrdemProducao = () => {
           solicitacao: ordem.solicitacao,
           grades: ordem.grades,
           pagamentos: ordemAtual.pagamentos || {},
-          conciliacao: ordemAtual.conciliacao || null
+          conciliacao: ordemAtual.conciliacao || null,
+          lancamentoMalha: ordemAtual.lancamentoMalha || null
         });
       }
       await carregarOrdens();

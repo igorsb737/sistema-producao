@@ -1,15 +1,7 @@
-import { ref, push, set, get } from 'firebase/database';
+import { ref, set, get } from 'firebase/database';
 import { database } from '../config/firebase';
 import { useState } from 'react';
 import { useOrdemProducao } from './useOrdemProducao';
-
-interface LancamentoMalha {
-  id: string;
-  ordemId: string;
-  malhaUsada: number;
-  dataLancamento: string;
-  rendimento: number;
-}
 
 export const useLancamentoMalha = () => {
   const [loading, setLoading] = useState(false);
@@ -23,45 +15,49 @@ export const useLancamentoMalha = () => {
   const lancarMalha = async (
     ordemId: string,
     malhaUsada: number,
+    ribanaUsada: number,
     totalCamisetasEntregue: number
   ) => {
     setLoading(true);
     try {
       // Verifica se já existe lançamento para esta ordem
-      const lancamentosRef = ref(database, 'lancamentosMalha');
-      const snapshot = await get(lancamentosRef);
+      const ordemRef = ref(database, `ordens/${ordemId}`);
+      const snapshot = await get(ordemRef);
       
-      if (snapshot.exists()) {
-        const lancamentos = snapshot.val();
-        const lancamentoExistente = Object.values(lancamentos).find(
-          (l: any) => l.ordemId === ordemId
-        );
-        
-        if (lancamentoExistente) {
-          throw new Error('Já existe um lançamento para esta ordem');
-        }
+      if (!snapshot.exists()) {
+        throw new Error('Ordem não encontrada');
+      }
+
+      const ordemAtual = snapshot.val();
+      
+      if (ordemAtual.lancamentoMalha) {
+        throw new Error('Já existe um lançamento para esta ordem');
       }
 
       // Calcula o rendimento
       const rendimento = calcularRendimento(totalCamisetasEntregue, malhaUsada);
 
-      // Cria o novo lançamento
-      const novoLancamentoRef = push(lancamentosRef);
-      const novoLancamento: LancamentoMalha = {
-        id: novoLancamentoRef.key || '',
-        ordemId,
-        malhaUsada,
-        dataLancamento: new Date().toLocaleDateString('pt-BR'),
-        rendimento
-      };
-
-      await set(novoLancamentoRef, novoLancamento);
+      // Atualiza a ordem com o lançamento de malha
+      await set(ordemRef, {
+        ...ordemAtual,
+        lancamentoMalha: {
+          malhaUsada,
+          ribanaUsada,
+          dataLancamento: new Date().toLocaleDateString('pt-BR'),
+          rendimento
+        }
+      });
 
       // Finaliza a ordem
       await finalizarOrdem(ordemId);
 
       setError(null);
-      return novoLancamento;
+      return {
+        malhaUsada,
+        ribanaUsada,
+        dataLancamento: new Date().toLocaleDateString('pt-BR'),
+        rendimento
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao lançar malha';
       setError(errorMessage);
@@ -73,16 +69,12 @@ export const useLancamentoMalha = () => {
 
   const buscarLancamentoPorOrdem = async (ordemId: string) => {
     try {
-      const lancamentosRef = ref(database, 'lancamentosMalha');
-      const snapshot = await get(lancamentosRef);
+      const ordemRef = ref(database, `ordens/${ordemId}`);
+      const snapshot = await get(ordemRef);
       
       if (snapshot.exists()) {
-        const lancamentos = snapshot.val();
-        const lancamento = Object.values(lancamentos).find(
-          (l: any) => l.ordemId === ordemId
-        );
-        
-        return lancamento as LancamentoMalha || null;
+        const ordem = snapshot.val();
+        return ordem.lancamentoMalha || null;
       }
       
       return null;

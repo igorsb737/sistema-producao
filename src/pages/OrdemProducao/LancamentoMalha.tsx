@@ -29,11 +29,13 @@ export const LancamentoMalha = () => {
   const [filtroItem, setFiltroItem] = useState('');
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroDataCriacao, setFiltroDataCriacao] = useState('');
-  const [malhaUsada, setMalhaUsada] = useState<number>(0);
+  const [malhaUsada, setMalhaUsada] = useState<number | undefined>(undefined);
+  const [ribanaUsada, setRibanaUsada] = useState<number | undefined>(undefined);
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemProducao | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [rendimentoAtual, setRendimentoAtual] = useState<number | null>(null);
 
-  const { ordens, loading: loadingOrdens } = useOrdemProducao();
+  const { ordens, loading: loadingOrdens, recarregarOrdens } = useOrdemProducao();
   const { lancarMalha, loading: loadingLancamento, error } = useLancamentoMalha();
   const { sortConfig, requestSort, getSortedItems } = useLancamentoMalhaSorting();
   const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
@@ -101,14 +103,25 @@ export const LancamentoMalha = () => {
       const matchCliente = ordem.informacoesGerais.cliente.toLowerCase().includes(filtroCliente.toLowerCase());
       const matchData = ordem.informacoesGerais.dataInicio.includes(filtroDataCriacao);
       const statusValido = ordem.informacoesGerais.status !== 'Finalizado';
+      const semLancamento = !ordem.lancamentoMalha;
 
-      return matchOrdem && matchItem && matchCliente && matchData && statusValido;
+      return matchOrdem && matchItem && matchCliente && matchData && statusValido && semLancamento;
     });
 
   const ordensSortedAndFiltered = getSortedItems(ordensFiltradas);
 
-  const handleLancarMalha = async () => {
-    if (!ordemSelecionada || malhaUsada <= 0) return;
+  const calcularRendimentoAtual = (malha: number | undefined) => {
+    if (!ordemSelecionada || !malha || malha <= 0) {
+      setRendimentoAtual(null);
+      return;
+    }
+    const totalRecebimentos = calcularTotalRecebimentos(ordemSelecionada);
+    const rendimento = totalRecebimentos / malha;
+    setRendimentoAtual(rendimento);
+  };
+
+  const handleLancarMalhaEFinalizar = async () => {
+    if (!ordemSelecionada || !malhaUsada || !ribanaUsada || malhaUsada <= 0 || ribanaUsada <= 0) return;
 
     const totalRecebimentos = calcularTotalRecebimentos(ordemSelecionada);
     const totalLancamentos = calcularTotalLancamentos(ordemSelecionada);
@@ -124,10 +137,13 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
     }
 
     try {
-      await lancarMalha(ordemSelecionada.id, malhaUsada, totalRecebimentos);
+      await lancarMalha(ordemSelecionada.id, malhaUsada, ribanaUsada, totalRecebimentos);
+      await recarregarOrdens();
       setOrdemSelecionada(null);
-      setMalhaUsada(0);
+      setMalhaUsada(undefined);
+      setRibanaUsada(undefined);
       setConfirmDialogOpen(false);
+      setRendimentoAtual(null);
     } catch (err) {
       console.error('Erro ao lançar malha:', err);
     }
@@ -212,12 +228,8 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                   <TableCell>{ordem.solicitacao.previsoes.malha}</TableCell>
                   <TableCell>{ordem.informacoesGerais.totalCamisetas}</TableCell>
                   <TableCell>{totalRecebimentos}</TableCell>
-                  <TableCell>
-                    {totalLancamentos} ({totaisPagos[ordem.id]?.valor ? `R$ ${totaisPagos[ordem.id].valor.toFixed(2)}` : 'R$ 0,00'})
-                  </TableCell>
-                  <TableCell>
-                    {totalConciliados} ({totaisConciliados[ordem.id]?.valor ? `R$ ${totaisConciliados[ordem.id].valor.toFixed(2)}` : 'R$ 0,00'})
-                  </TableCell>
+                  <TableCell>{totalLancamentos}</TableCell>
+                  <TableCell>{totalConciliados}</TableCell>
                   <TableCell>
                     <Button
                       variant="contained"
@@ -225,6 +237,7 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                       onClick={() => {
                         setOrdemSelecionada(ordem);
                         setConfirmDialogOpen(true);
+                        setRendimentoAtual(null);
                       }}
                       disabled={!validarTotais(ordem)}
                     >
@@ -249,6 +262,9 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
             <Typography variant="body1" gutterBottom>
               Item: {ordemSelecionada?.solicitacao.item.nome}
             </Typography>
+            <Typography variant="body1" gutterBottom>
+              Total de Camisetas Entregue: {calcularTotalRecebimentos(ordemSelecionada)}
+            </Typography>
             <Typography variant="body1" gutterBottom color="error">
               Atenção: Após o lançamento, a ordem será finalizada e não poderá mais ser modificada.
             </Typography>
@@ -261,27 +277,44 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
                   Total Entregue: {calcularTotalRecebimentos(ordemSelecionada)}
                 </Typography>
                 <Typography variant="body2">
-                  Total Lançado: {calcularTotalLancamentos(ordemSelecionada)} 
-                  ({ordemSelecionada && totaisPagos[ordemSelecionada.id]?.valor 
-                    ? `R$ ${totaisPagos[ordemSelecionada.id].valor.toFixed(2)}` 
-                    : 'R$ 0,00'})
+                  Total Lançado: {calcularTotalLancamentos(ordemSelecionada)}
                 </Typography>
                 <Typography variant="body2">
                   Total Conciliado: {calcularTotalConciliados(ordemSelecionada)}
-                  ({ordemSelecionada && totaisConciliados[ordemSelecionada.id]?.valor 
-                    ? `R$ ${totaisConciliados[ordemSelecionada.id].valor.toFixed(2)}` 
-                    : 'R$ 0,00'})
                 </Typography>
               </Box>
             )}
-            <TextField
-              fullWidth
-              label="Quantidade de Malha Usada (kg)"
-              type="number"
-              value={malhaUsada}
-              onChange={(e) => setMalhaUsada(Number(e.target.value))}
-              sx={{ mt: 2 }}
-            />
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Quantidade de Malha Usada (kg)"
+                  type="number"
+                  value={malhaUsada || ''}
+                  onChange={(e) => {
+                    const valor = e.target.value ? Number(e.target.value) : undefined;
+                    setMalhaUsada(valor);
+                    calcularRendimentoAtual(valor);
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Quantidade de Ribana Usada (kg)"
+                  type="number"
+                  value={ribanaUsada || ''}
+                  onChange={(e) => setRibanaUsada(e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </Grid>
+            </Grid>
+            {rendimentoAtual !== null && (
+              <Grid item xs={12}>
+                <Typography variant="body1" color="primary">
+                  Rendimento Atual: {rendimentoAtual.toFixed(2)} peças/kg
+                </Typography>
+              </Grid>
+            )}
             {error && (
               <Typography color="error" sx={{ mt: 2 }}>
                 {error}
@@ -290,17 +323,23 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={() => {
+            setConfirmDialogOpen(false);
+            setRendimentoAtual(null);
+          }}>
+            Cancelar
+          </Button>
           <Button
-            onClick={handleLancarMalha}
+            onClick={handleLancarMalhaEFinalizar}
             variant="contained"
             color="primary"
-            disabled={loadingLancamento || malhaUsada <= 0}
+            disabled={loadingLancamento || !malhaUsada || !ribanaUsada || malhaUsada <= 0 || ribanaUsada <= 0}
           >
-            {loadingLancamento ? 'Lançando...' : 'Confirmar e Finalizar'}
+            {loadingLancamento ? 'Finalizando...' : 'Lançar Malha e Finalizar Pedido'}
           </Button>
         </DialogActions>
       </Dialog>
+
     </Box>
   );
 };

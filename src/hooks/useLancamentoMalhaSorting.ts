@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { OrdemProducao } from './useOrdemProducao';
 
-type SortKey = 'item' | 'dataCriacao' | 'cliente';
+type SortKey = 'item' | 'dataCriacao' | 'cliente' | 'ordem';
 type SortDirection = 'asc' | 'desc';
 
 interface SortConfig {
@@ -30,6 +30,10 @@ export const useLancamentoMalhaSorting = () => {
       let bValue: string = '';
 
       switch (sortConfig.key) {
+        case 'ordem':
+          aValue = a.informacoesGerais.numero;
+          bValue = b.informacoesGerais.numero;
+          break;
         case 'item':
           aValue = a.solicitacao.item.nome;
           bValue = b.solicitacao.item.nome;
