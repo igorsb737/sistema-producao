@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ref, get, set, push } from 'firebase/database';
 import { database } from '../config/firebase';
 
@@ -37,9 +36,6 @@ interface TotaisConciliados {
 }
 
 export const usePagamentos = () => {
-  const [loading] = useState(true);
-  const [error] = useState<string | null>(null);
-
   const buscarPagamentos = async (orderId: string, apenasNaoConciliados: boolean = false): Promise<Pagamento[]> => {
     try {
       const pagamentosRef = ref(database, `ordens/${orderId}/pagamentos`);
@@ -279,8 +275,6 @@ export const usePagamentos = () => {
   };
 
   return {
-    loading,
-    error,
     buscarPagamentos,
     adicionarPagamento,
     calcularTotalPago,

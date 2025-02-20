@@ -160,9 +160,9 @@ function RelatorioConciliacoes() {
                 <MenuItem value="">Todos</MenuItem>
                 {fornecedores
                   .filter((f) => f.situacao === 'A')
-                  .map((fornecedor) => (
-                    <MenuItem key={fornecedor.id} value={fornecedor.id}>
-                      {fornecedor.nome}
+                  .map((f) => (
+                    <MenuItem key={f.id} value={f.id}>
+                      {f.nome}
                     </MenuItem>
                   ))}
               </Select>

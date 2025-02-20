@@ -1,12 +1,12 @@
 import { Box, Typography, Grid, Paper } from '@mui/material';
-import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 
 const Dashboard = () => {
   const { ordens, loading } = useOrdemProducao();
 
-  const ordensAbertas = ordens.filter(ordem => ordem.informacoesGerais.status === 'Aberta').length;
-  const ordensFinalizadas = ordens.filter(ordem => ordem.informacoesGerais.status === 'Finalizado').length;
-  const totalCamisetas = ordens.reduce((total, ordem) => total + ordem.informacoesGerais.totalCamisetas, 0);
+  const ordensAbertas = ordens.filter((ordem: OrdemProducao) => ordem.informacoesGerais.status === 'Aberta').length;
+  const ordensFinalizadas = ordens.filter((ordem: OrdemProducao) => ordem.informacoesGerais.status === 'Finalizado').length;
+  const totalCamisetas = ordens.reduce((total: number, ordem: OrdemProducao) => total + ordem.informacoesGerais.totalCamisetas, 0);
 
   return (
     <Box>

@@ -431,7 +431,6 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
           </Button>
         </DialogActions>
       </Dialog>
-
     </Box>
   );
 };
