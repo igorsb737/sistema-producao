@@ -55,7 +55,8 @@ export const useProdutos = () => {
   }, []);
 
   // Aplica a ordenação nos produtos
-  const produtosOrdenados = useSorting(produtos, { key: 'nome' });
+  const sorting = useSorting(produtos, { key: 'nome' });
+  const produtosOrdenados = sorting.getSortedItems;
 
   return { produtos: produtosOrdenados, loading, error };
 };

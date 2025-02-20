@@ -15,6 +15,8 @@ import {
   Chip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 
 function RecebimentoMercadoria() {
   const navigate = useNavigate();
@@ -51,6 +53,23 @@ function RecebimentoMercadoria() {
       }, 0);
     }, 0);
   };
+
+  // Prepara os dados para ordenação com as propriedades corretas
+  const ordensParaOrdenacao = ordensDisponiveis.map(ordem => ({
+    ...ordem,
+    numero: ordem.informacoesGerais.numero,
+    item: ordem.solicitacao.item.nome,
+    dataInicio: ordem.informacoesGerais.dataInicio,
+    dataEntrega: ordem.informacoesGerais.dataEntrega,
+    cliente: ordem.informacoesGerais.cliente,
+    totalCamisetas: ordem.informacoesGerais.totalCamisetas,
+    totalEntregue: calcularTotalEntregue(ordem),
+    status: ordem.informacoesGerais.status
+  }));
+
+  const { sortConfigs, requestSort, getSortedItems } = useSorting(ordensParaOrdenacao, {
+    initialSort: [{ key: 'numero', direction: 'desc' }]
+  });
 
   const handleToggleOrdem = (numero: string) => {
     setSelectedOrdens((prev) =>
@@ -120,25 +139,65 @@ function RecebimentoMercadoria() {
                     }}
                   />
                 </TableCell>
-                <TableCell>Número</TableCell>
-                <TableCell>Item</TableCell>
-                <TableCell>Data Início</TableCell>
-                <TableCell>Data Entrega</TableCell>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Total Camisetas</TableCell>
-                <TableCell>Total Entregue</TableCell>
-                <TableCell>Status</TableCell>
+                <TableSortableHeader
+                  label="Ordem"
+                  field="numero"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Item"
+                  field="item"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Data Início"
+                  field="dataInicio"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Data Entrega"
+                  field="dataEntrega"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Cliente"
+                  field="cliente"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Total Camisetas"
+                  field="totalCamisetas"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Total Entregue"
+                  field="totalEntregue"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Status"
+                  field="status"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
               </TableRow>
             </TableHead>
             <TableBody>
-              {ordensDisponiveis.length === 0 ? (
+              {getSortedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center">
                     Nenhuma ordem de produção disponível para recebimento
                   </TableCell>
                 </TableRow>
               ) : (
-                ordensDisponiveis.map((ordem) => (
+                getSortedItems.map((ordem) => (
                   <TableRow
                     key={ordem.informacoesGerais.numero}
                     hover

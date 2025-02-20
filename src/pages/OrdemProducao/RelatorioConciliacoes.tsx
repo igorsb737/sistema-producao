@@ -24,6 +24,8 @@ import {
   Grid,
 } from '@mui/material';
 import { Assessment as AssessmentIcon } from '@mui/icons-material';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 
 interface Filtros {
   fornecedorId: string;
@@ -130,6 +132,8 @@ function RelatorioConciliacoes() {
     }));
   };
 
+  const { sortConfigs, requestSort, getSortedItems } = useSorting(conciliacoes);
+
   return (
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -216,17 +220,72 @@ function RelatorioConciliacoes() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Ordem de Produção</TableCell>
-              <TableCell>Data Conciliação</TableCell>
-              <TableCell>Data Pagamento</TableCell>
-              <TableCell>Item</TableCell>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Status Pedido</TableCell>
-              <TableCell>Serviço</TableCell>
-              <TableCell align="right">Qtd. Conciliada</TableCell>
-              <TableCell align="right">Valor</TableCell>
-              <TableCell align="right">Total</TableCell>
-              <TableCell>Status Conciliação</TableCell>
+              <TableSortableHeader
+                label="Ordem de Produção"
+                field="numeroOrdem"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Data Conciliação"
+                field="dataConciliacao"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Data Pagamento"
+                field="dataPagamento"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Item"
+                field="item"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Cliente"
+                field="cliente"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Status Pedido"
+                field="statusPedido"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Serviço"
+                field="servico"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Qtd. Conciliada"
+                field="quantidadeConciliada"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Valor"
+                field="valor"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Total"
+                field="total"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Status Conciliação"
+                field="statusConciliacao"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -236,14 +295,14 @@ function RelatorioConciliacoes() {
                   <Typography>Carregando...</Typography>
                 </TableCell>
               </TableRow>
-            ) : conciliacoes.length === 0 ? (
+            ) : getSortedItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} align="center">
                   <Typography>Nenhuma conciliação encontrada</Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              conciliacoes.map((conciliacao, index) => (
+              getSortedItems.map((conciliacao, index) => (
                 <TableRow key={`${conciliacao.ordemId}-${index}`}>
                   <TableCell>{conciliacao.numeroOrdem}</TableCell>
                   <TableCell>{conciliacao.dataConciliacao}</TableCell>

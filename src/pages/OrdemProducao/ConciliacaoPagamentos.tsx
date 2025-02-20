@@ -24,9 +24,11 @@ import {
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parse, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 
 interface LancamentoSelecionado {
   ordemId: string;
@@ -36,6 +38,14 @@ interface LancamentoSelecionado {
   quantidade: number;
   servicoId: string;
   checked: boolean;
+}
+
+interface LancamentoComInfo extends LancamentoSelecionado {
+  numero: string;
+  item: string;
+  tipoServico: string;
+  cliente: string;
+  dataEntrega: string;
 }
 
 function ConciliacaoPagamentos() {
@@ -142,6 +152,23 @@ function ConciliacaoPagamentos() {
     };
   }, [ordens]);
 
+  // Prepara os dados para ordenação com as informações completas
+  const lancamentosComInfo: LancamentoComInfo[] = lancamentos.map(lancamento => {
+    const ordemInfo = getOrdemInfo(lancamento.ordemId);
+    const servico = getServicoById(lancamento.servicoId);
+    
+    return {
+      ...lancamento,
+      numero: ordemInfo?.numero || '',
+      item: ordemInfo?.item || '',
+      tipoServico: servico?.nome || 'N/A',
+      cliente: ordemInfo?.cliente || '',
+      dataEntrega: ordemInfo?.dataEntrega || '',
+    };
+  });
+
+  const { sortConfigs, requestSort, getSortedItems } = useSorting(lancamentosComInfo);
+
   const totalSelecionado = lancamentos
     .filter(l => l.checked)
     .reduce((sum, l) => sum + (Number(l.valor) || 0), 0);
@@ -240,12 +267,42 @@ function ConciliacaoPagamentos() {
                     }
                   />
                 </TableCell>
-                <TableCell>Número</TableCell>
-                <TableCell>Item</TableCell>
-                <TableCell>Tipo de Serviço</TableCell>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Data Entrega</TableCell>
-                <TableCell align="right">Valor</TableCell>
+                <TableSortableHeader
+                  label="Número"
+                  field="numero"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Item"
+                  field="item"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Tipo de Serviço"
+                  field="tipoServico"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Cliente"
+                  field="cliente"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Data Entrega"
+                  field="dataEntrega"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Valor"
+                  field="valor"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -255,7 +312,7 @@ function ConciliacaoPagamentos() {
                     Carregando lançamentos...
                   </TableCell>
                 </TableRow>
-              ) : lancamentos.length === 0 ? (
+              ) : getSortedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     {fornecedorId
@@ -264,33 +321,34 @@ function ConciliacaoPagamentos() {
                   </TableCell>
                 </TableRow>
               ) : (
-                lancamentos.map((lancamento, index) => {
-                  const ordemInfo = getOrdemInfo(lancamento.ordemId);
-                  if (!ordemInfo) return null;
-
-                  return (
-                    <TableRow key={`${lancamento.ordemId}-${lancamento.pagamentoId}-${lancamento.lancamentoIndex}`}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={lancamento.checked}
-                          onChange={(e) =>
-                            handleCheckLancamento(index, e.target.checked)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{ordemInfo.numero}</TableCell>
-                      <TableCell>{ordemInfo.item}</TableCell>
-                      <TableCell>
-                        {getServicoById(lancamento.servicoId)?.nome || 'N/A'}
-                      </TableCell>
-                      <TableCell>{ordemInfo.cliente}</TableCell>
-                      <TableCell>{ordemInfo.dataEntrega}</TableCell>
-                      <TableCell align="right">
-                        {`R$ ${Number(lancamento.valor).toFixed(2)}`}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                getSortedItems.map((lancamento, index) => (
+                  <TableRow key={`${lancamento.ordemId}-${lancamento.pagamentoId}-${lancamento.lancamentoIndex}`}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={lancamento.checked}
+                        onChange={(e) =>
+                          handleCheckLancamento(
+                            lancamentos.findIndex(
+                              l =>
+                                l.ordemId === lancamento.ordemId &&
+                                l.pagamentoId === lancamento.pagamentoId &&
+                                l.lancamentoIndex === lancamento.lancamentoIndex
+                            ),
+                            e.target.checked
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>{lancamento.numero}</TableCell>
+                    <TableCell>{lancamento.item}</TableCell>
+                    <TableCell>{lancamento.tipoServico}</TableCell>
+                    <TableCell>{lancamento.cliente}</TableCell>
+                    <TableCell>{lancamento.dataEntrega}</TableCell>
+                    <TableCell align="right">
+                      {`R$ ${Number(lancamento.valor).toFixed(2)}`}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>

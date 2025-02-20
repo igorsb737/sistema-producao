@@ -22,6 +22,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ptBR from 'date-fns/locale/pt-BR';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 
 function OrdemProducaoPage() {
   const navigate = useNavigate();
@@ -44,6 +46,40 @@ function OrdemProducaoPage() {
     }
 
     return matchStatus && matchCliente && matchItem && matchData;
+  });
+
+  // Prepara os dados para ordenação com as propriedades corretas
+  interface OrdemParaOrdenacao extends OrdemProducao {
+    numero: string;
+    item: string;
+    dataInicio: string;
+    dataEntrega: string;
+    cliente: string;
+    totalCamisetas: number;
+    camisetasEntregues: number;
+    status: string;
+  }
+
+  const ordensParaOrdenacao: OrdemParaOrdenacao[] = ordensFiltered.map(ordem => {
+    const camisetasEntregues = Object.values(ordem.grades || {}).reduce((total, grade) => {
+      return total + (grade.recebimentos?.reduce((sum, rec) => sum + rec.quantidade, 0) || 0);
+    }, 0);
+
+    return {
+      ...ordem,
+      numero: ordem.informacoesGerais.numero,
+      item: ordem.solicitacao.item.nome,
+      dataInicio: ordem.informacoesGerais.dataInicio,
+      dataEntrega: ordem.informacoesGerais.dataEntrega,
+      cliente: ordem.informacoesGerais.cliente,
+      totalCamisetas: ordem.informacoesGerais.totalCamisetas,
+      camisetasEntregues,
+      status: ordem.informacoesGerais.status
+    };
+  });
+
+  const { sortConfigs, requestSort, getSortedItems } = useSorting(ordensParaOrdenacao, {
+    initialSort: [{ key: 'numero', direction: 'desc' }]
   });
 
   const getStatusColor = (status: string) => {
@@ -206,25 +242,65 @@ function OrdemProducaoPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Número</TableCell>
-              <TableCell>Item</TableCell>
-              <TableCell>Data Início</TableCell>
-              <TableCell>Data Entrega</TableCell>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Total Camisetas</TableCell>
-              <TableCell>Camisetas Entregues</TableCell>
-              <TableCell>Status</TableCell>
+              <TableSortableHeader
+                label="Ordem"
+                field="numero"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Item"
+                field="item"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Data Início"
+                field="dataInicio"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Data Entrega"
+                field="dataEntrega"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Cliente"
+                field="cliente"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Total Camisetas"
+                field="totalCamisetas"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Camisetas Entregues"
+                field="camisetasEntregues"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Status"
+                field="status"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
             </TableRow>
           </TableHead>
           <TableBody>
-            {ordensFiltered.length === 0 ? (
+            {getSortedItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} align="center">
                   Nenhuma ordem de produção encontrada
                 </TableCell>
               </TableRow>
             ) : (
-              ordensFiltered.map((ordem) => (
+              getSortedItems.map((ordem) => (
                 <TableRow
                   key={ordem.informacoesGerais.numero}
                   hover

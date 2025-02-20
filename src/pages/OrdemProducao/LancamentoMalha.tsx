@@ -21,9 +21,10 @@ import {
   MenuItem,
   Chip,
 } from '@mui/material';
-import { useOrdemProducao, OrdemProducao, Lancamento } from '../../hooks/useOrdemProducao';
+import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 import { useLancamentoMalha } from '../../hooks/useLancamentoMalha';
-import { useLancamentoMalhaSorting } from '../../hooks/useLancamentoMalhaSorting';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 import { usePagamentos } from '../../hooks/usePagamentos';
 
 export const LancamentoMalha = () => {
@@ -40,7 +41,6 @@ export const LancamentoMalha = () => {
 
   const { ordens, loading: loadingOrdens, recarregarOrdens } = useOrdemProducao();
   const { lancarMalha, loading: loadingLancamento, error } = useLancamentoMalha();
-  const { sortConfig, requestSort, getSortedItems } = useLancamentoMalhaSorting();
   const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});
   const [totaisConciliados, setTotaisConciliados] = useState<Record<string, { quantidade: number; valor: number }>>({});
@@ -51,11 +51,9 @@ export const LancamentoMalha = () => {
       const totaisConc: Record<string, { quantidade: number; valor: number }> = {};
       
       for (const ordem of ordens) {
-        if (ordem.informacoesGerais.status !== 'Finalizado') {
-          const pagamentos = await buscarPagamentos(ordem.id);
-          totaisPag[ordem.id] = calcularTotalPago(pagamentos);
-          totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
-        }
+        const pagamentos = await buscarPagamentos(ordem.id);
+        totaisPag[ordem.id] = calcularTotalPago(pagamentos);
+        totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
       }
       
       setTotaisPagos(totaisPag);
@@ -111,7 +109,22 @@ export const LancamentoMalha = () => {
       return matchOrdem && matchItem && matchCliente && matchData && matchStatus && statusValido;
     });
 
-  const ordensSortedAndFiltered = getSortedItems(ordensFiltradas);
+  // Prepara os dados para ordenação com as propriedades corretas
+  const ordensParaOrdenacao = ordensFiltradas.map(ordem => ({
+    ...ordem,
+    ordem: ordem.informacoesGerais.numero,
+    item: ordem.solicitacao.item.nome,
+    dataCriacao: ordem.informacoesGerais.dataInicio,
+    cliente: ordem.informacoesGerais.cliente,
+    malhaPrevista: ordem.solicitacao.previsoes.malha,
+    totalCamisetasPrevistas: ordem.informacoesGerais.totalCamisetas,
+    totalCamisetasEntregue: calcularTotalRecebimentos(ordem),
+    totalLancamentos: calcularTotalLancamentos(ordem),
+    totalConciliados: calcularTotalConciliados(ordem),
+    status: ordem.informacoesGerais.status
+  }));
+
+  const { sortConfigs, requestSort, getSortedItems } = useSorting(ordensParaOrdenacao);
 
   const calcularRendimentoAtual = (malha: number | undefined) => {
     if (!ordemSelecionada || !malha || malha <= 0) {
@@ -218,21 +231,71 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell onClick={() => requestSort('ordem')}>Ordem</TableCell>
-              <TableCell onClick={() => requestSort('item')}>Item</TableCell>
-              <TableCell onClick={() => requestSort('dataCriacao')}>Data de Criação</TableCell>
-              <TableCell onClick={() => requestSort('cliente')}>Cliente</TableCell>
-              <TableCell>Malha Prevista</TableCell>
-              <TableCell>Total Camisetas Previstas</TableCell>
-              <TableCell>Total Camisetas Entregue</TableCell>
-              <TableCell>Total Lançamentos</TableCell>
-              <TableCell>Total Conciliados</TableCell>
-              <TableCell onClick={() => requestSort('status')}>Status</TableCell>
+              <TableSortableHeader
+                label="Ordem"
+                field="ordem"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Item"
+                field="item"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Data de Criação"
+                field="dataCriacao"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Cliente"
+                field="cliente"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Malha Prevista"
+                field="malhaPrevista"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Total Camisetas Previstas"
+                field="totalCamisetasPrevistas"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Total Camisetas Entregue"
+                field="totalCamisetasEntregue"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Total Lançamentos"
+                field="totalLancamentos"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Total Conciliados"
+                field="totalConciliados"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
+              <TableSortableHeader
+                label="Status"
+                field="status"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
               <TableCell>Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {ordensSortedAndFiltered.map((ordem) => {
+            {getSortedItems.map((ordem) => {
               const totalRecebimentos = calcularTotalRecebimentos(ordem);
               const totalLancamentos = calcularTotalLancamentos(ordem);
               const totalConciliados = calcularTotalConciliados(ordem);

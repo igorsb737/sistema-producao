@@ -1,11 +1,14 @@
-import { Box, Container, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import { Menu as MenuIcon, Dashboard, Assignment, Settings, Inventory, LocalShipping, Payment, Layers } from '@mui/icons-material';
+import { Box, Container, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, Button, Menu, MenuItem } from '@mui/material';
+import { Menu as MenuIcon, Dashboard, Assignment, Settings, Inventory, LocalShipping, Payment, Layers, AccountCircle } from '@mui/icons-material';
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth.tsx';
 
 const Layout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
@@ -14,12 +17,29 @@ const Layout = () => {
     { text: 'Lançamento de Malha', icon: <Layers />, path: '/ordens/lancamento-malha' },
     { text: 'Pagamento', icon: <Payment />, path: '/ordens/pagamento' },
     { text: 'Registros', icon: <Inventory />, path: '/registros' },
-    { text: 'Configurações', icon: <Settings />, path: '/configuracoes' },
+    { text: 'Usuários', icon: <Settings />, path: '/configuracoes' },
   ];
 
   const handleNavigate = (path: string) => {
     navigate(path);
     setDrawerOpen(false);
+  };
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
   return (
@@ -34,9 +54,30 @@ const Layout = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Sistema de Produção
           </Typography>
+          {user && (
+            <div>
+              <Button
+                color="inherit"
+                onClick={handleMenu}
+                startIcon={<AccountCircle />}
+              >
+                {user.email}
+              </Button>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                <MenuItem disabled>
+                  Função: {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
+                </MenuItem>
+                <MenuItem onClick={handleLogout}>Sair</MenuItem>
+              </Menu>
+            </div>
+          )}
         </Toolbar>
       </AppBar>
 

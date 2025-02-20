@@ -448,10 +448,10 @@ const NovaOrdemProducao = () => {
                     fullWidth 
                     size="small"
                     error={!!errorProdutos}
-                    helperText={errorProdutos}
-                    InputLabelProps={{
-                      shrink: true
-                    }}
+                      helperText={!itemSelecionado ? "Selecione primeiro um item principal" : errorProdutos}
+                      InputLabelProps={{
+                        shrink: true
+                      }}
                   />
                 )}
               />
@@ -687,19 +687,27 @@ const NovaOrdemProducao = () => {
                     return option.codigo === value.codigo || option.id === value.id;
                   }}
                   filterOptions={(options, { inputValue }) => {
+                    // Se não houver item principal selecionado, retorna array vazio
+                    if (!itemSelecionado?.id) {
+                      return [];
+                    }
+
                     // Primeiro filtra por idProdutoPai
                     const filteredByParent = options.filter(option => 
-                      option.idProdutoPai === itemSelecionado?.id
+                      option.idProdutoPai === itemSelecionado.id
                     );
                     
-                    // Aplica a busca por texto se houver
-                    const filteredBySearch = inputValue 
-                      ? filteredByParent.filter(option => {
-                          const searchTerms = inputValue.toLowerCase().split('&').map(term => term.trim());
-                          const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
-                          return searchTerms.every(term => searchText.includes(term));
-                        })
-                      : filteredByParent;
+                    // Se não houver input, retorna todos os itens filtrados por pai
+                    if (!inputValue) {
+                      return sortBySize(filteredByParent, 'nome');
+                    }
+
+                    // Aplica a busca por texto
+                    const searchTerms = inputValue.toLowerCase().split('&').map(term => term.trim());
+                    const filteredBySearch = filteredByParent.filter(option => {
+                      const searchText = `${option.nome} ${option.codigo || ''} ${option.descricaoCurta || ''}`.toLowerCase();
+                      return searchTerms.every(term => searchText.includes(term));
+                    });
 
                     // Ordena os resultados usando a função sortBySize
                     return sortBySize(filteredBySearch, 'nome');
@@ -711,7 +719,7 @@ const NovaOrdemProducao = () => {
                       fullWidth
                       size="small"
                       error={!!errorProdutos}
-                      helperText={errorProdutos}
+                      helperText={!itemSelecionado ? "Selecione primeiro um item principal" : errorProdutos}
                       InputLabelProps={{
                         shrink: true
                       }}

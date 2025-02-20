@@ -5,15 +5,18 @@ import { CssBaseline } from '@mui/material';
 import { theme } from './theme';
 import Routes from './routes';
 import 'dayjs/locale/pt-br';
+import { AuthProvider } from './hooks/useAuth.tsx';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
-        <CssBaseline />
-        <Routes />
-      </LocalizationProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
+          <CssBaseline />
+          <Routes />
+        </LocalizationProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

@@ -16,6 +16,8 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Assessment as AssessmentIcon } from '@mui/icons-material';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 
 function PagamentoOrdens() {
   const navigate = useNavigate();
@@ -64,6 +66,25 @@ function PagamentoOrdens() {
     }, 0);
   };
 
+  // Prepara os dados para ordenação com as propriedades corretas
+  const ordensParaOrdenacao = ordensDisponiveis.map(ordem => ({
+    ...ordem,
+    numero: ordem.informacoesGerais.numero,
+    item: ordem.solicitacao.item.nome,
+    dataInicio: ordem.informacoesGerais.dataInicio,
+    dataEntrega: ordem.informacoesGerais.dataEntrega,
+    cliente: ordem.informacoesGerais.cliente,
+    totalCamisetas: ordem.informacoesGerais.totalCamisetas,
+    totalEntregue: calcularTotalEntregue(ordem),
+    totalLancado: totaisPagos[ordem.id]?.quantidade || 0,
+    valorTotalLancado: totaisPagos[ordem.id]?.valor || 0,
+    totalConciliado: totaisConciliados[ordem.id]?.quantidade || 0,
+    valorTotalConciliado: totaisConciliados[ordem.id]?.valor || 0,
+    status: ordem.informacoesGerais.status
+  }));
+
+  const { sortConfigs, requestSort, getSortedItems } = useSorting(ordensParaOrdenacao);
+
   const handleRowClick = (numero: string) => {
     navigate(`/ordens/pagamento/detalhes?ordem=${numero}`);
   };
@@ -104,29 +125,89 @@ function PagamentoOrdens() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Número</TableCell>
-                <TableCell>Item</TableCell>
-                <TableCell>Data Início</TableCell>
-                <TableCell>Data Entrega</TableCell>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Total Camisetas</TableCell>
-                <TableCell>Total Entregue</TableCell>
-                <TableCell>Total Lançado</TableCell>
-                <TableCell>Valor Total Lançado</TableCell>
-                <TableCell>Total Conciliado</TableCell>
-                <TableCell>Valor Total Conciliado</TableCell>
-                <TableCell>Status</TableCell>
+                <TableSortableHeader
+                  label="Número"
+                  field="numero"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Item"
+                  field="item"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Data Início"
+                  field="dataInicio"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Data Entrega"
+                  field="dataEntrega"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Cliente"
+                  field="cliente"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Total Camisetas"
+                  field="totalCamisetas"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Total Entregue"
+                  field="totalEntregue"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Total Lançado"
+                  field="totalLancado"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Valor Total Lançado"
+                  field="valorTotalLancado"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Total Conciliado"
+                  field="totalConciliado"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Valor Total Conciliado"
+                  field="valorTotalConciliado"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
+                <TableSortableHeader
+                  label="Status"
+                  field="status"
+                  sortConfigs={sortConfigs}
+                  onSort={requestSort}
+                />
               </TableRow>
             </TableHead>
             <TableBody>
-              {ordensDisponiveis.length === 0 ? (
+              {getSortedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={12} align="center">
                     Nenhuma ordem de produção disponível para pagamento
                   </TableCell>
                 </TableRow>
               ) : (
-                ordensDisponiveis.map((ordem) => (
+                getSortedItems.map((ordem) => (
                   <TableRow
                     key={ordem.informacoesGerais.numero}
                     hover

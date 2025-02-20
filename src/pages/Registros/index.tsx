@@ -18,6 +18,8 @@ import {
 } from '@mui/material';
 import { useBling } from '../../hooks/useBling';
 import SyncIcon from '@mui/icons-material/Sync';
+import { useSorting } from '../../hooks/useSorting';
+import { TableSortableHeader } from '../../components/TableSortableHeader';
 
 interface Produto {
   id: string;
@@ -98,6 +100,13 @@ export const Registros = () => {
   const [sincronizandoRibana, setSincronizandoRibana] = useState(false);
   const [sincronizandoServico, setSincronizandoServico] = useState(false);
   const [sincronizandoFornecedor, setSincronizandoFornecedor] = useState(false);
+
+  // Hooks de ordenação para cada tipo de dado
+  const { sortConfigs: produtosSortConfigs, requestSort: requestProdutosSort, getSortedItems: getSortedProdutos } = useSorting(produtos);
+  const { sortConfigs: malhasSortConfigs, requestSort: requestMalhasSort, getSortedItems: getSortedMalhas } = useSorting(malhas);
+  const { sortConfigs: ribanasSortConfigs, requestSort: requestRibanasSort, getSortedItems: getSortedRibanas } = useSorting(ribanas);
+  const { sortConfigs: servicosSortConfigs, requestSort: requestServicosSort, getSortedItems: getSortedServicos } = useSorting(servicos);
+  const { sortConfigs: fornecedoresSortConfigs, requestSort: requestFornecedoresSort, getSortedItems: getSortedFornecedores } = useSorting(fornecedores);
 
   const carregarDados = async () => {
     try {
@@ -226,11 +235,36 @@ export const Registros = () => {
               <Table sx={tableStyle}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={otherCellStyle}>ID</TableCell>
-                    <TableCell sx={otherCellStyle}>Código</TableCell>
-                    <TableCell sx={nameCellStyle}>Nome</TableCell>
-                    <TableCell sx={otherCellStyle}>ID Produto Pai</TableCell>
-                    <TableCell sx={otherCellStyle}>Situação</TableCell>
+                    <TableSortableHeader
+                      label="ID"
+                      field="id"
+                      sortConfigs={produtosSortConfigs}
+                      onSort={requestProdutosSort}
+                    />
+                    <TableSortableHeader
+                      label="Código"
+                      field="codigo"
+                      sortConfigs={produtosSortConfigs}
+                      onSort={requestProdutosSort}
+                    />
+                    <TableSortableHeader
+                      label="Nome"
+                      field="nome"
+                      sortConfigs={produtosSortConfigs}
+                      onSort={requestProdutosSort}
+                    />
+                    <TableSortableHeader
+                      label="ID Produto Pai"
+                      field="idProdutoPai"
+                      sortConfigs={produtosSortConfigs}
+                      onSort={requestProdutosSort}
+                    />
+                    <TableSortableHeader
+                      label="Situação"
+                      field="situacao"
+                      sortConfigs={produtosSortConfigs}
+                      onSort={requestProdutosSort}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -240,14 +274,14 @@ export const Registros = () => {
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ) : produtos.length === 0 ? (
+                  ) : getSortedProdutos.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
                         Nenhum produto encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    produtos.map((produto) => (
+                    getSortedProdutos.map((produto) => (
                       <TableRow key={produto.id}>
                         <TableCell sx={otherCellStyle}>{produto.id}</TableCell>
                         <TableCell sx={otherCellStyle}>{produto.codigo}</TableCell>
@@ -281,11 +315,36 @@ export const Registros = () => {
               <Table sx={tableStyle}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={otherCellStyle}>ID</TableCell>
-                    <TableCell sx={otherCellStyle}>Código</TableCell>
-                    <TableCell sx={nameCellStyle}>Nome</TableCell>
-                    <TableCell sx={otherCellStyle}>ID Produto Pai</TableCell>
-                    <TableCell sx={otherCellStyle}>Situação</TableCell>
+                    <TableSortableHeader
+                      label="ID"
+                      field="id"
+                      sortConfigs={malhasSortConfigs}
+                      onSort={requestMalhasSort}
+                    />
+                    <TableSortableHeader
+                      label="Código"
+                      field="codigo"
+                      sortConfigs={malhasSortConfigs}
+                      onSort={requestMalhasSort}
+                    />
+                    <TableSortableHeader
+                      label="Nome"
+                      field="nome"
+                      sortConfigs={malhasSortConfigs}
+                      onSort={requestMalhasSort}
+                    />
+                    <TableSortableHeader
+                      label="ID Produto Pai"
+                      field="idProdutoPai"
+                      sortConfigs={malhasSortConfigs}
+                      onSort={requestMalhasSort}
+                    />
+                    <TableSortableHeader
+                      label="Situação"
+                      field="situacao"
+                      sortConfigs={malhasSortConfigs}
+                      onSort={requestMalhasSort}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -295,14 +354,14 @@ export const Registros = () => {
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ) : malhas.length === 0 ? (
+                  ) : getSortedMalhas.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
                         Nenhuma malha encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
-                    malhas.map((malha) => (
+                    getSortedMalhas.map((malha) => (
                       <TableRow key={malha.id}>
                         <TableCell sx={otherCellStyle}>{malha.id}</TableCell>
                         <TableCell sx={otherCellStyle}>{malha.codigo}</TableCell>
@@ -336,11 +395,36 @@ export const Registros = () => {
               <Table sx={tableStyle}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={otherCellStyle}>ID</TableCell>
-                    <TableCell sx={otherCellStyle}>Código</TableCell>
-                    <TableCell sx={nameCellStyle}>Nome</TableCell>
-                    <TableCell sx={otherCellStyle}>ID Produto Pai</TableCell>
-                    <TableCell sx={otherCellStyle}>Situação</TableCell>
+                    <TableSortableHeader
+                      label="ID"
+                      field="id"
+                      sortConfigs={ribanasSortConfigs}
+                      onSort={requestRibanasSort}
+                    />
+                    <TableSortableHeader
+                      label="Código"
+                      field="codigo"
+                      sortConfigs={ribanasSortConfigs}
+                      onSort={requestRibanasSort}
+                    />
+                    <TableSortableHeader
+                      label="Nome"
+                      field="nome"
+                      sortConfigs={ribanasSortConfigs}
+                      onSort={requestRibanasSort}
+                    />
+                    <TableSortableHeader
+                      label="ID Produto Pai"
+                      field="idProdutoPai"
+                      sortConfigs={ribanasSortConfigs}
+                      onSort={requestRibanasSort}
+                    />
+                    <TableSortableHeader
+                      label="Situação"
+                      field="situacao"
+                      sortConfigs={ribanasSortConfigs}
+                      onSort={requestRibanasSort}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -350,14 +434,14 @@ export const Registros = () => {
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ) : ribanas.length === 0 ? (
+                  ) : getSortedRibanas.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
                         Nenhuma ribana encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
-                    ribanas.map((ribana) => (
+                    getSortedRibanas.map((ribana) => (
                       <TableRow key={ribana.id}>
                         <TableCell sx={otherCellStyle}>{ribana.id}</TableCell>
                         <TableCell sx={otherCellStyle}>{ribana.codigo}</TableCell>
@@ -402,9 +486,24 @@ export const Registros = () => {
               <Table sx={tableStyle}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={otherCellStyle}>ID</TableCell>
-                    <TableCell sx={nameCellStyle}>Nome</TableCell>
-                    <TableCell sx={otherCellStyle}>Situação</TableCell>
+                    <TableSortableHeader
+                      label="ID"
+                      field="id"
+                      sortConfigs={servicosSortConfigs}
+                      onSort={requestServicosSort}
+                    />
+                    <TableSortableHeader
+                      label="Nome"
+                      field="nome"
+                      sortConfigs={servicosSortConfigs}
+                      onSort={requestServicosSort}
+                    />
+                    <TableSortableHeader
+                      label="Situação"
+                      field="situacao"
+                      sortConfigs={servicosSortConfigs}
+                      onSort={requestServicosSort}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -414,14 +513,14 @@ export const Registros = () => {
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ) : servicos.length === 0 ? (
+                  ) : getSortedServicos.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} align="center">
                         Nenhum serviço encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    servicos.map((servico) => (
+                    getSortedServicos.map((servico) => (
                       <TableRow key={servico.id}>
                         <TableCell sx={otherCellStyle}>{servico.id}</TableCell>
                         <TableCell sx={nameCellStyle}>{servico.nome}</TableCell>
@@ -464,10 +563,30 @@ export const Registros = () => {
               <Table sx={tableStyle}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={otherCellStyle}>ID</TableCell>
-                    <TableCell sx={otherCellStyle}>Código</TableCell>
-                    <TableCell sx={nameCellStyle}>Nome</TableCell>
-                    <TableCell sx={otherCellStyle}>Situação</TableCell>
+                    <TableSortableHeader
+                      label="ID"
+                      field="id"
+                      sortConfigs={fornecedoresSortConfigs}
+                      onSort={requestFornecedoresSort}
+                    />
+                    <TableSortableHeader
+                      label="Código"
+                      field="codigo"
+                      sortConfigs={fornecedoresSortConfigs}
+                      onSort={requestFornecedoresSort}
+                    />
+                    <TableSortableHeader
+                      label="Nome"
+                      field="nome"
+                      sortConfigs={fornecedoresSortConfigs}
+                      onSort={requestFornecedoresSort}
+                    />
+                    <TableSortableHeader
+                      label="Situação"
+                      field="situacao"
+                      sortConfigs={fornecedoresSortConfigs}
+                      onSort={requestFornecedoresSort}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -477,14 +596,14 @@ export const Registros = () => {
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ) : fornecedores.length === 0 ? (
+                  ) : getSortedFornecedores.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} align="center">
                         Nenhum fornecedor encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    fornecedores.map((fornecedor) => (
+                    getSortedFornecedores.map((fornecedor) => (
                       <TableRow key={fornecedor.id}>
                         <TableCell sx={otherCellStyle}>{fornecedor.id}</TableCell>
                         <TableCell sx={otherCellStyle}>{fornecedor.codigo}</TableCell>
