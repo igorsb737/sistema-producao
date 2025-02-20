@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePagamentos } from '../../hooks/usePagamentos';
 import { useFornecedores } from '../../hooks/useFornecedores';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
-import { format } from 'date-fns';
 import { useServicos } from '../../hooks/useServicos';
 import {
   Box,
@@ -96,7 +95,6 @@ function RelatorioConciliacoes() {
               );
               
               const servico = getServicoById(lancamentoConciliado?.servicoId || lancamento.servicoId);
-              const fornecedor = fornecedores.find(f => f.id === lancamento.fornecedorId);
               
               conciliacoesTemp.push({
                 ordemId: ordem.id,

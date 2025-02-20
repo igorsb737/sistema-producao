@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ref, get, set, push, child } from 'firebase/database';
+import { useState } from 'react';
+import { ref, get, set, push } from 'firebase/database';
 import { database } from '../config/firebase';
 
 export interface Lancamento {
@@ -37,8 +37,8 @@ interface TotaisConciliados {
 }
 
 export const usePagamentos = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading] = useState(true);
+  const [error] = useState<string | null>(null);
 
   const buscarPagamentos = async (orderId: string, apenasNaoConciliados: boolean = false): Promise<Pagamento[]> => {
     try {
@@ -147,7 +147,6 @@ export const usePagamentos = () => {
   };
 
   const criarConciliacao = async (
-    fornecedorId: string,
     dataPagamento: string,
     lancamentosSelecionados: Array<{
       ordemId: string;

@@ -53,7 +53,7 @@ function ConciliacaoPagamentos() {
   const { fornecedores } = useFornecedores();
   const { ordens } = useOrdemProducao();
   const { buscarPagamentosPorFornecedor, criarConciliacao } = usePagamentos();
-  const { servicos, getServicoById } = useServicos();
+  const { getServicoById } = useServicos();
 
   const [fornecedorId, setFornecedorId] = useState('');
   const [dataPagamento, setDataPagamento] = useState<Date | null>(null);
@@ -120,7 +120,6 @@ function ConciliacaoPagamentos() {
 
     try {
       await criarConciliacao(
-        fornecedorId,
         format(dataPagamento, 'dd-MM-yyyy'),
         lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor, quantidade, servicoId }) => ({
           ordemId,
@@ -321,7 +320,7 @@ function ConciliacaoPagamentos() {
                   </TableCell>
                 </TableRow>
               ) : (
-                getSortedItems.map((lancamento, index) => (
+                getSortedItems.map((lancamento) => (
                   <TableRow key={`${lancamento.ordemId}-${lancamento.pagamentoId}-${lancamento.lancamentoIndex}`}>
                     <TableCell padding="checkbox">
                       <Checkbox

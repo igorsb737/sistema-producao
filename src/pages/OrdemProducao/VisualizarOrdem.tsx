@@ -1,10 +1,9 @@
-import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { useOrdemProducao, Status } from '../../hooks/useOrdemProducao';
 import { Box, Typography, Paper, CircularProgress, Grid, Chip } from '@mui/material';
 
 function VisualizarOrdem() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { ordens, loading, error } = useOrdemProducao();
   
   if (loading) {

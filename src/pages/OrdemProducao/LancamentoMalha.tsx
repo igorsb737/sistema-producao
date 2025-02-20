@@ -39,7 +39,7 @@ export const LancamentoMalha = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [rendimentoAtual, setRendimentoAtual] = useState<number | null>(null);
 
-  const { ordens, loading: loadingOrdens, recarregarOrdens } = useOrdemProducao();
+  const { ordens, recarregarOrdens } = useOrdemProducao();
   const { lancarMalha, loading: loadingLancamento, error } = useLancamentoMalha();
   const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});

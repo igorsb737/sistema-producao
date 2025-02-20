@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useFornecedores } from '../../hooks/useFornecedores';
 import {
   Box,
   Button,
@@ -66,7 +65,7 @@ function TabPanel(props: TabPanelProps) {
 export const Registros = () => {
   const [currentTab, setCurrentTab] = useState(0);
 
-  const handleChangeTab = (event: React.SyntheticEvent, newValue: number) => {
+  const handleChangeTab = (_: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
   };
 

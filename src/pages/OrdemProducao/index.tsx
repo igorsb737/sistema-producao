@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
+import { useState } from 'react';
+import { useOrdemProducao, type OrdemProducao } from '../../hooks/useOrdemProducao';
 import {
   Box,
   Typography,

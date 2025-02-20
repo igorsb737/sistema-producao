@@ -1,6 +1,6 @@
-import { ref, set, get, onValue } from 'firebase/database';
+import { ref, set, get } from 'firebase/database';
 import { database } from '../config/firebase';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface ProdutoBling {
   id: string;
