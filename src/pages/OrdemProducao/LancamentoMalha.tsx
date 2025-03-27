@@ -20,8 +20,12 @@ import {
   DialogActions,
   MenuItem,
   Chip,
+  Divider,
 } from '@mui/material';
-import { ref, get } from 'firebase/database';
+import {
+  ref,
+  get,
+} from 'firebase/database';
 import { database } from '../../config/firebase';
 import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 import { useLancamentoMalha } from '../../hooks/useLancamentoMalha';
@@ -41,6 +45,8 @@ export const LancamentoMalha = () => {
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemProducao | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [rendimentoAtual, setRendimentoAtual] = useState<number | null>(null);
+  const [malhaInfo, setMalhaInfo] = useState<{ id: string; nome: string } | null>(null);
+  const [ribanaInfo, setRibanaInfo] = useState<{ id: string; nome: string } | null>(null);
 
   const { ordens, recarregarOrdens } = useOrdemProducao();
   const { lancarMalha, loading: loadingLancamento, error } = useLancamentoMalha();
@@ -169,46 +175,202 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
       }
       
       // Obter os IDs dos produtos
-      const malhaId = '16392163101'; // ID da malha do Firebase (imagem 2)
-      const ribanaId = '16404382515'; // ID da ribana do Firebase (imagem 3)
-      
-      // Calcular o rendimento
-      const rendimento = totalRecebimentos / malhaUsada;
-      
-      // Formatar a observação para o Bling
-      const observacao = `OP ${ordemSelecionada.informacoesGerais.numero} - Qtd: ${totalRecebimentos} - Rendimento: ${rendimento.toFixed(2)}`;
-      
-      // Lançar saída de malha no Bling
-      const malhaLancada = await registrarSaidaEstoque(
-        malhaId,
-        malhaUsada,
-        observacao
-      );
-      
-      // Lançar saída de ribana no Bling
-      const ribanaLancada = await registrarSaidaEstoque(
-        ribanaId,
-        ribanaUsada,
-        observacao
-      );
-      
-      // Se ambos os lançamentos no Bling forem bem-sucedidos, lançar no Firebase e finalizar a ordem
-      if (malhaLancada && ribanaLancada) {
-        await lancarMalha(ordemSelecionada.id, malhaUsada, ribanaUsada, totalRecebimentos);
-        await recarregarOrdens();
-        setOrdemSelecionada(null);
-        setMalhaUsada(undefined);
-        setRibanaUsada(undefined);
-        setConfirmDialogOpen(false);
-        setRendimentoAtual(null);
+      // Verificar se temos os IDs corretos
+      if (!malhaInfo?.id || !ribanaInfo?.id) {
+        console.error('IDs não encontrados nos estados:', { malhaInfo, ribanaInfo });
+        
+        // Tentar buscar novamente os IDs diretamente
+        let malhaId = '';
+        let ribanaId = '';
+        
+        // Buscar malha pelo nome
+        const malhasData = malhasSnapshot.val();
+        for (const [_, malha] of Object.entries(malhasData)) {
+          if ((malha as any).nome === ordemSelecionada.solicitacao.malha.nome) {
+            malhaId = (malha as any).id;
+            console.log('ID da malha encontrado diretamente:', malhaId);
+            break;
+          }
+        }
+        
+        // Buscar ribana pelo nome
+        const ribanasData = ribanasSnapshot.val();
+        for (const [_, ribana] of Object.entries(ribanasData)) {
+          if ((ribana as any).nome === ordemSelecionada.solicitacao.ribana.nome) {
+            ribanaId = (ribana as any).id;
+            console.log('ID da ribana encontrado diretamente:', ribanaId);
+            break;
+          }
+        }
+        
+        if (!malhaId || !ribanaId) {
+          throw new Error('Não foi possível encontrar os IDs dos produtos no Firebase');
+        }
+        
+        // Calcular o rendimento
+        const rendimento = totalRecebimentos / malhaUsada;
+        
+        // Formatar a observação para o Bling
+        const observacao = `OP ${ordemSelecionada.informacoesGerais.numero} - Qtd: ${totalRecebimentos} - Rendimento: ${rendimento.toFixed(2)}`;
+        
+        console.log('Enviando para o Bling - Malha:', { id: malhaId, quantidade: malhaUsada });
+        console.log('Enviando para o Bling - Ribana:', { id: ribanaId, quantidade: ribanaUsada });
+        
+        // Lançar saída de malha no Bling
+        const malhaLancada = await registrarSaidaEstoque(
+          malhaId,
+          malhaUsada,
+          observacao
+        );
+        
+        // Lançar saída de ribana no Bling
+        const ribanaLancada = await registrarSaidaEstoque(
+          ribanaId,
+          ribanaUsada,
+          observacao
+        );
+        
+        // Se ambos os lançamentos no Bling forem bem-sucedidos, lançar no Firebase e finalizar a ordem
+        if (malhaLancada && ribanaLancada) {
+          await lancarMalha(ordemSelecionada.id, malhaUsada, ribanaUsada, totalRecebimentos);
+          await recarregarOrdens();
+          setOrdemSelecionada(null);
+          setMalhaUsada(undefined);
+          setRibanaUsada(undefined);
+          setConfirmDialogOpen(false);
+          setRendimentoAtual(null);
+        } else {
+          throw new Error('Falha ao lançar estoque no Bling');
+        }
       } else {
-        throw new Error('Falha ao lançar estoque no Bling');
+        // Usar os IDs dos estados
+        const malhaId = malhaInfo.id;
+        const ribanaId = ribanaInfo.id;
+        
+        // Calcular o rendimento
+        const rendimento = totalRecebimentos / malhaUsada;
+        
+        // Formatar a observação para o Bling
+        const observacao = `OP ${ordemSelecionada.informacoesGerais.numero} - Qtd: ${totalRecebimentos} - Rendimento: ${rendimento.toFixed(2)}`;
+        
+        console.log('Enviando para o Bling - Malha:', { id: malhaId, quantidade: malhaUsada });
+        console.log('Enviando para o Bling - Ribana:', { id: ribanaId, quantidade: ribanaUsada });
+        
+        // Lançar saída de malha no Bling
+        const malhaLancada = await registrarSaidaEstoque(
+          malhaId,
+          malhaUsada,
+          observacao
+        );
+        
+        // Lançar saída de ribana no Bling
+        const ribanaLancada = await registrarSaidaEstoque(
+          ribanaId,
+          ribanaUsada,
+          observacao
+        );
+        
+        // Se ambos os lançamentos no Bling forem bem-sucedidos, lançar no Firebase e finalizar a ordem
+        if (malhaLancada && ribanaLancada) {
+          await lancarMalha(ordemSelecionada.id, malhaUsada, ribanaUsada, totalRecebimentos);
+          await recarregarOrdens();
+          setOrdemSelecionada(null);
+          setMalhaUsada(undefined);
+          setRibanaUsada(undefined);
+          setConfirmDialogOpen(false);
+          setRendimentoAtual(null);
+        } else {
+          throw new Error('Falha ao lançar estoque no Bling');
+        }
       }
     } catch (err) {
       console.error('Erro ao lançar malha:', err);
       alert(`Erro ao lançar malha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     }
   };
+
+  useEffect(() => {
+    const buscarInfoProdutos = async () => {
+      if (!ordemSelecionada) {
+        setMalhaInfo(null);
+        setRibanaInfo(null);
+        return;
+      }
+      
+      try {
+        // Buscar informações da malha e ribana
+        const malhasRef = ref(database, 'malhas');
+        const ribanasRef = ref(database, 'ribanas');
+        
+        const [malhasSnapshot, ribanasSnapshot] = await Promise.all([
+          get(malhasRef),
+          get(ribanasRef)
+        ]);
+        
+        let malhaEncontrada = null;
+        let ribanaEncontrada = null;
+        let malhaKey = '';
+        let ribanaKey = '';
+        
+        if (malhasSnapshot.exists()) {
+          const malhasData = malhasSnapshot.val();
+          // Buscar pelo nome da malha na ordem
+          const malhaNome = ordemSelecionada.solicitacao.malha.nome;
+          
+          for (const [key, malha] of Object.entries(malhasData)) {
+            if ((malha as any).nome === malhaNome) {
+              malhaEncontrada = { key, ...malha as any };
+              malhaKey = key;
+              break;
+            }
+          }
+          
+          if (malhaEncontrada) {
+            setMalhaInfo({
+              id: malhaEncontrada.id || malhaKey, // Usar o ID interno ou a chave como fallback
+              nome: malhaEncontrada.nome
+            });
+          } else {
+            console.warn('Malha não encontrada pelo nome:', malhaNome);
+          }
+        }
+        
+        if (ribanasSnapshot.exists()) {
+          const ribanasData = ribanasSnapshot.val();
+          // Buscar pelo nome da ribana na ordem
+          const ribanaNome = ordemSelecionada.solicitacao.ribana.nome;
+          
+          for (const [key, ribana] of Object.entries(ribanasData)) {
+            if ((ribana as any).nome === ribanaNome) {
+              ribanaEncontrada = { key, ...ribana as any };
+              ribanaKey = key;
+              break;
+            }
+          }
+          
+          if (ribanaEncontrada) {
+            setRibanaInfo({
+              id: ribanaEncontrada.id || ribanaKey, // Usar o ID interno ou a chave como fallback
+              nome: ribanaEncontrada.nome
+            });
+          } else {
+            console.warn('Ribana não encontrada pelo nome:', ribanaNome);
+          }
+        }
+        
+        // Log para debug
+        console.log('Malha encontrada:', malhaEncontrada);
+        console.log('Ribana encontrada:', ribanaEncontrada);
+        
+      } catch (err) {
+        console.error('Erro ao buscar informações dos produtos:', err);
+        setMalhaInfo(null);
+        setRibanaInfo(null);
+      }
+    };
+    
+    buscarInfoProdutos();
+  }, [ordemSelecionada]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -394,6 +556,39 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
             <Typography variant="body1" gutterBottom>
               Item: {ordemSelecionada?.solicitacao.item.nome}
             </Typography>
+            
+            {/* Informações da Malha e Ribana */}
+            <Box sx={{ my: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Materiais que serão retirados do estoque:
+              </Typography>
+              <Box sx={{ bgcolor: '#f5f5f5', p: 1.5, borderRadius: 1, mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Malha:
+                </Typography>
+                <Typography variant="body1">
+                  {malhaInfo?.nome || ordemSelecionada?.solicitacao.malha.nome}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  ID: {malhaInfo?.id || "Não encontrado"}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ bgcolor: '#f5f5f5', p: 1.5, borderRadius: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Ribana:
+                </Typography>
+                <Typography variant="body1">
+                  {ribanaInfo?.nome || ordemSelecionada?.solicitacao.ribana.nome}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  ID: {ribanaInfo?.id || "Não encontrado"}
+                </Typography>
+              </Box>
+            </Box>
+            
+            <Divider sx={{ my: 2 }} />
+            
             <Typography variant="body1" gutterBottom>
               Total de Camisetas Entregue: {calcularTotalRecebimentos(ordemSelecionada)}
             </Typography>
