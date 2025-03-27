@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
+import { useBling } from '../../hooks/useBling';
 import { getSizeWeight } from '../../utils/sorting';
 import {
   Box,
@@ -35,8 +36,11 @@ function RecebimentoMercadoriaDetalhes() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { ordens, loading, error, registrarRecebimento } = useOrdemProducao();
+  const { registrarEntradaEstoque } = useBling();
   const [itensRecebimento, setItensRecebimento] = useState<RecebimentoItem[]>([]);
   const [dataRecebimentoGlobal, setDataRecebimentoGlobal] = useState<Date>(new Date());
+  const [enviandoParaBling, setEnviandoParaBling] = useState(false);
+  const [errosBling, setErrosBling] = useState<string[]>([]);
 
   useEffect(() => {
     const ordensParam = searchParams.get('ordens');
@@ -112,6 +116,9 @@ function RecebimentoMercadoriaDetalhes() {
 
   const handleEntrarMercadoria = async () => {
     try {
+      setEnviandoParaBling(true);
+      setErrosBling([]);
+      
       // Filtra apenas itens com quantidade recebida maior que 0
       const itensParaReceber = itensRecebimento.filter(
         (item) => item.quantidadeRecebida > 0
@@ -119,6 +126,7 @@ function RecebimentoMercadoriaDetalhes() {
 
       if (itensParaReceber.length === 0) {
         alert('Nenhuma quantidade informada para recebimento');
+        setEnviandoParaBling(false);
         return;
       }
 
@@ -133,18 +141,46 @@ function RecebimentoMercadoriaDetalhes() {
         // Formata a data no padrão dd-MM-yyyy
         const dataFormatada = format(item.dataRecebimento, 'dd-MM-yyyy');
 
-        // Registra o recebimento
+        // Registra o recebimento no sistema interno
         await registrarRecebimento(ordem.id, item.gradeId, {
           quantidade: item.quantidadeRecebida,
           data: dataFormatada,
         });
+
+        // Prepara observações para o Bling
+        const observacoes = `UP ${item.ordemNumero} - Qtd: ${item.quantidadeRecebida} - Data: ${dataFormatada}`;
+        
+        try {
+          // Registra entrada no estoque do Bling
+          await registrarEntradaEstoque(
+            item.nome,
+            item.quantidadeRecebida,
+            observacoes
+          );
+        } catch (err) {
+          // Captura erros específicos do Bling
+          const mensagemErro = err instanceof Error 
+            ? `Erro ao enviar ${item.nome} para o Bling: ${err.message}`
+            : `Erro ao enviar ${item.nome} para o Bling`;
+          
+          setErrosBling(prev => [...prev, mensagemErro]);
+          console.error(mensagemErro, err);
+        }
       }
 
-      alert('Recebimento registrado com sucesso!');
+      if (errosBling.length > 0) {
+        // Se houve erros no Bling, mas o recebimento interno foi registrado
+        alert(`Recebimento registrado com sucesso, mas houve erros ao enviar para o Bling. Verifique o console para mais detalhes.`);
+      } else {
+        alert('Recebimento registrado com sucesso e enviado para o Bling!');
+      }
+      
       navigate('/ordens/recebimento');
     } catch (err) {
       console.error('Erro ao registrar recebimento:', err);
       alert('Erro ao registrar recebimento. Tente novamente.');
+    } finally {
+      setEnviandoParaBling(false);
     }
   };
 
@@ -179,12 +215,29 @@ function RecebimentoMercadoriaDetalhes() {
           <Button
             variant="contained"
             onClick={handleEntrarMercadoria}
-            disabled={itensRecebimento.every((item) => item.quantidadeRecebida === 0)}
+            disabled={itensRecebimento.every((item) => item.quantidadeRecebida === 0) || enviandoParaBling}
           >
-            Entrar Mercadoria
+            {enviandoParaBling ? 'Processando...' : 'Entrar Mercadoria'}
           </Button>
         </Box>
       </Box>
+
+      {errosBling.length > 0 && (
+        <Paper sx={{ p: 2, mb: 2, bgcolor: '#ffebee' }}>
+          <Typography variant="subtitle1" color="error" gutterBottom>
+            Erros ao enviar para o Bling:
+          </Typography>
+          <ul>
+            {errosBling.map((erro, index) => (
+              <li key={index}>
+                <Typography variant="body2" color="error">
+                  {erro}
+                </Typography>
+              </li>
+            ))}
+          </ul>
+        </Paper>
+      )}
 
       <Paper sx={{ p: 2, mb: 2 }}>
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>

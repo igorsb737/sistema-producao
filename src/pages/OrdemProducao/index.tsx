@@ -15,15 +15,18 @@ import {
   TextField,
   MenuItem,
   Grid,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ptBR from 'date-fns/locale/pt-BR';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSorting } from '../../hooks/useSorting';
 import { TableSortableHeader } from '../../components/TableSortableHeader';
+import { generateOrdemPDF } from '../../utils/pdfGenerator';
 
 function OrdemProducaoPage() {
   const navigate = useNavigate();
@@ -290,12 +293,13 @@ function OrdemProducaoPage() {
                 sortConfigs={sortConfigs}
                 onSort={requestSort}
               />
+              <TableCell>Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {getSortedItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center">
+                <TableCell colSpan={9} align="center">
                   Nenhuma ordem de produção encontrada
                 </TableCell>
               </TableRow>
@@ -324,6 +328,20 @@ function OrdemProducaoPage() {
                       color={getStatusColor(ordem.informacoesGerais.status)}
                       size="small"
                     />
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="Baixar PDF">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateOrdemPDF(ordem);
+                        }}
+                      >
+                        <PdfIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))

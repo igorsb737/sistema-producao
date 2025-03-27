@@ -21,11 +21,14 @@ import {
   MenuItem,
   Chip,
 } from '@mui/material';
+import { ref, get } from 'firebase/database';
+import { database } from '../../config/firebase';
 import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 import { useLancamentoMalha } from '../../hooks/useLancamentoMalha';
 import { useSorting } from '../../hooks/useSorting';
 import { TableSortableHeader } from '../../components/TableSortableHeader';
 import { usePagamentos } from '../../hooks/usePagamentos';
+import { useBling } from '../../hooks/useBling';
 
 export const LancamentoMalha = () => {
   const [filtroOrdem, setFiltroOrdem] = useState('');
@@ -42,6 +45,7 @@ export const LancamentoMalha = () => {
   const { ordens, recarregarOrdens } = useOrdemProducao();
   const { lancarMalha, loading: loadingLancamento, error } = useLancamentoMalha();
   const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
+  const { registrarSaidaEstoque } = useBling();
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});
   const [totaisConciliados, setTotaisConciliados] = useState<Record<string, { quantidade: number; valor: number }>>({});
 
@@ -153,15 +157,56 @@ Os totais de camisetas entregues, lançadas e conciliadas devem ser iguais.`);
     }
 
     try {
-      await lancarMalha(ordemSelecionada.id, malhaUsada, ribanaUsada, totalRecebimentos);
-      await recarregarOrdens();
-      setOrdemSelecionada(null);
-      setMalhaUsada(undefined);
-      setRibanaUsada(undefined);
-      setConfirmDialogOpen(false);
-      setRendimentoAtual(null);
+      // Buscar IDs dos produtos no Firebase
+      const malhasRef = ref(database, 'malhas');
+      const ribanasRef = ref(database, 'ribanas');
+      
+      const malhasSnapshot = await get(malhasRef);
+      const ribanasSnapshot = await get(ribanasRef);
+      
+      if (!malhasSnapshot.exists() || !ribanasSnapshot.exists()) {
+        throw new Error('Dados de malhas ou ribanas não encontrados');
+      }
+      
+      // Obter os IDs dos produtos
+      const malhaId = '16392163101'; // ID da malha do Firebase (imagem 2)
+      const ribanaId = '16404382515'; // ID da ribana do Firebase (imagem 3)
+      
+      // Calcular o rendimento
+      const rendimento = totalRecebimentos / malhaUsada;
+      
+      // Formatar a observação para o Bling
+      const observacao = `OP ${ordemSelecionada.informacoesGerais.numero} - Qtd: ${totalRecebimentos} - Rendimento: ${rendimento.toFixed(2)}`;
+      
+      // Lançar saída de malha no Bling
+      const malhaLancada = await registrarSaidaEstoque(
+        malhaId,
+        malhaUsada,
+        observacao
+      );
+      
+      // Lançar saída de ribana no Bling
+      const ribanaLancada = await registrarSaidaEstoque(
+        ribanaId,
+        ribanaUsada,
+        observacao
+      );
+      
+      // Se ambos os lançamentos no Bling forem bem-sucedidos, lançar no Firebase e finalizar a ordem
+      if (malhaLancada && ribanaLancada) {
+        await lancarMalha(ordemSelecionada.id, malhaUsada, ribanaUsada, totalRecebimentos);
+        await recarregarOrdens();
+        setOrdemSelecionada(null);
+        setMalhaUsada(undefined);
+        setRibanaUsada(undefined);
+        setConfirmDialogOpen(false);
+        setRendimentoAtual(null);
+      } else {
+        throw new Error('Falha ao lançar estoque no Bling');
+      }
     } catch (err) {
       console.error('Erro ao lançar malha:', err);
+      alert(`Erro ao lançar malha: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     }
   };
 

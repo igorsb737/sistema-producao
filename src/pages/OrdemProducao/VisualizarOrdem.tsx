@@ -1,6 +1,8 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { useOrdemProducao, Status } from '../../hooks/useOrdemProducao';
-import { Box, Typography, Paper, CircularProgress, Grid, Chip } from '@mui/material';
+import { Box, Typography, Paper, CircularProgress, Grid, Chip, Button } from '@mui/material';
+import { PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import { generateOrdemPDF } from '../../utils/pdfGenerator';
 
 function VisualizarOrdem() {
   const { id } = useParams();
@@ -39,9 +41,19 @@ function VisualizarOrdem() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 4 }}>
-        Ordem de Produção #{ordem.informacoesGerais.numero}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4">
+          Ordem de Produção #{ordem.informacoesGerais.numero}
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PdfIcon />}
+          onClick={() => generateOrdemPDF(ordem)}
+        >
+          Baixar PDF
+        </Button>
+      </Box>
 
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={3}>

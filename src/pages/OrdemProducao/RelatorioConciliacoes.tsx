@@ -21,8 +21,12 @@ import {
   TextField,
   Button,
   Grid,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
-import { Assessment as AssessmentIcon } from '@mui/icons-material';
+import { Assessment as AssessmentIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useSorting } from '../../hooks/useSorting';
 import { TableSortableHeader } from '../../components/TableSortableHeader';
 
@@ -30,9 +34,11 @@ interface Filtros {
   fornecedorId: string;
   servicoId: string;
   dataPagamento: string;
+  codigoConciliacao: string;
 }
 
 interface Conciliacao {
+  id?: string; 
   ordemId: string;
   numeroOrdem: string;
   dataConciliacao: string;
@@ -45,51 +51,72 @@ interface Conciliacao {
   valor: number;
   total: number;
   statusConciliacao: string;
+  codigoConciliacao?: string;
+  blingContaPagarId?: string; 
+  lancamentos?: Array<any>; 
 }
 
 function RelatorioConciliacoes() {
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const { ordens } = useOrdemProducao();
-  const { buscarPagamentos } = usePagamentos();
+  const { buscarPagamentos, atualizarStatusConciliacoes } = usePagamentos();
   
   const [filtros, setFiltros] = useState<Filtros>({
     fornecedorId: '',
     servicoId: '',
     dataPagamento: '',
+    codigoConciliacao: '',
   });
   
   const { servicos, getServicoById } = useServicos();
   
   const [conciliacoes, setConciliacoes] = useState<Conciliacao[]>([]);
   const [loading, setLoading] = useState(false);
+  const [atualizandoStatus, setAtualizandoStatus] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
 
   const buscarConciliacoes = async () => {
     setLoading(true);
     try {
       const conciliacoesTemp: Conciliacao[] = [];
       
-      // Busca todas as ordens com pagamentos
       for (const ordem of ordens) {
         const pagamentos = await buscarPagamentos(ordem.id);
         
-        // Filtra pagamentos com conciliação
         const pagamentosConciliados = pagamentos.filter(p => p.conciliacao);
         
         for (const pagamento of pagamentosConciliados) {
-          // Aplica filtros
           const lancamentosFiltrados = pagamento.lancamentos.filter(l => {
             const matchFornecedor = !filtros.fornecedorId || l.fornecedorId === filtros.fornecedorId;
             const matchServico = !filtros.servicoId || l.servicoId === filtros.servicoId;
             const matchData = !filtros.dataPagamento || 
               pagamento.conciliacao?.dataPagamento.includes(filtros.dataPagamento);
+            const matchCodigo = !filtros.codigoConciliacao || 
+              (pagamento.conciliacao?.codigoConciliacao && 
+               pagamento.conciliacao.codigoConciliacao.toLowerCase().includes(filtros.codigoConciliacao.toLowerCase()));
             
-            return matchFornecedor && matchServico && matchData;
+            return matchFornecedor && matchServico && matchData && matchCodigo;
           });
 
           if (lancamentosFiltrados.length > 0) {
+            let conciliacaoId = '';
+            let blingContaPagarId = '';
+            
+            if (pagamento.conciliacao?.codigoConciliacao) {
+              conciliacaoId = pagamento.conciliacao.codigoConciliacao;
+              blingContaPagarId = pagamento.conciliacao.blingContaPagarId || '';
+            }
+            
             for (const lancamento of lancamentosFiltrados) {
-              // Encontra o lançamento selecionado correspondente na conciliação
               const lancamentoConciliado = pagamento.conciliacao?.lancamentosSelecionados.find(
                 l => l.index === lancamentosFiltrados.indexOf(lancamento)
               );
@@ -97,6 +124,7 @@ function RelatorioConciliacoes() {
               const servico = getServicoById(lancamentoConciliado?.servicoId || lancamento.servicoId);
               
               conciliacoesTemp.push({
+                id: conciliacaoId,
                 ordemId: ordem.id,
                 numeroOrdem: ordem.informacoesGerais.numero,
                 dataConciliacao: pagamento.conciliacao?.dataConciliacao || '',
@@ -109,6 +137,13 @@ function RelatorioConciliacoes() {
                 valor: lancamento.valor,
                 total: lancamento.total,
                 statusConciliacao: pagamento.conciliacao?.status || 'N/A',
+                codigoConciliacao: pagamento.conciliacao?.codigoConciliacao || 'N/A',
+                blingContaPagarId: blingContaPagarId,
+                lancamentos: [{ 
+                  ordemId: ordem.id, 
+                  pagamentoId: pagamento.id, 
+                  lancamentoIndex: lancamentosFiltrados.indexOf(lancamento)
+                }]
               });
             }
           }
@@ -118,6 +153,11 @@ function RelatorioConciliacoes() {
       setConciliacoes(conciliacoesTemp);
     } catch (error) {
       console.error('Erro ao buscar conciliações:', error);
+      setSnackbar({
+        open: true,
+        message: 'Erro ao buscar conciliações. Tente novamente.',
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -130,6 +170,65 @@ function RelatorioConciliacoes() {
     }));
   };
 
+  const handleAtualizarStatus = async () => {
+    if (conciliacoes.length === 0) {
+      setSnackbar({
+        open: true,
+        message: 'Nenhuma conciliação para atualizar.',
+        severity: 'warning',
+      });
+      return;
+    }
+
+    setAtualizandoStatus(true);
+    try {
+      // Remover filtro de status, considerar todas as conciliações com ID Bling
+      const conciliacoesParaAtualizar = conciliacoes.filter(
+        c => c.blingContaPagarId
+      );
+
+      if (conciliacoesParaAtualizar.length === 0) {
+        setSnackbar({
+          open: true,
+          message: 'Nenhuma conciliação com ID Bling para atualizar.',
+          severity: 'info',
+        });
+        setAtualizandoStatus(false);
+        return;
+      }
+
+      const resultado = await atualizarStatusConciliacoes(conciliacoesParaAtualizar);
+      
+      if (resultado.atualizadas > 0) {
+        setSnackbar({
+          open: true,
+          message: `${resultado.atualizadas} de ${resultado.total} conciliações atualizadas com sucesso!`,
+          severity: 'success',
+        });
+        buscarConciliacoes();
+      } else {
+        setSnackbar({
+          open: true,
+          message: `Nenhuma conciliação precisou ser atualizada. ${resultado.total} verificadas.`,
+          severity: 'info',
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status das conciliações:', error);
+      setSnackbar({
+        open: true,
+        message: 'Erro ao atualizar status das conciliações. Tente novamente.',
+        severity: 'error',
+      });
+    } finally {
+      setAtualizandoStatus(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const { sortConfigs, requestSort, getSortedItems } = useSorting(conciliacoes);
 
   return (
@@ -138,18 +237,31 @@ function RelatorioConciliacoes() {
         <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <AssessmentIcon /> Relatório de Conciliações
         </Typography>
-        <Button
-          variant="outlined"
-          onClick={() => navigate(-1)}
-        >
-          Voltar
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Tooltip title="Atualizar status das conciliações visíveis">
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleAtualizarStatus}
+              disabled={atualizandoStatus || conciliacoes.length === 0}
+              startIcon={atualizandoStatus ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />}
+            >
+              {atualizandoStatus ? 'Atualizando...' : 'Atualizar Status'}
+            </Button>
+          </Tooltip>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(-1)}
+          >
+            Voltar
+          </Button>
+        </Box>
       </Box>
 
       {/* Filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Fornecedor</InputLabel>
               <Select
@@ -169,7 +281,7 @@ function RelatorioConciliacoes() {
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Serviço</InputLabel>
               <Select
@@ -187,7 +299,7 @@ function RelatorioConciliacoes() {
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2}>
             <TextField
               fullWidth
               size="small"
@@ -198,6 +310,16 @@ function RelatorioConciliacoes() {
               InputLabelProps={{
                 shrink: true,
               }}
+            />
+          </Grid>
+          
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Código de Conciliação"
+              value={filtros.codigoConciliacao}
+              onChange={(e) => handleFiltroChange('codigoConciliacao', e.target.value)}
             />
           </Grid>
           
@@ -218,6 +340,12 @@ function RelatorioConciliacoes() {
         <Table>
           <TableHead>
             <TableRow>
+              <TableSortableHeader
+                label="Código"
+                field="codigoConciliacao"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
               <TableSortableHeader
                 label="Ordem de Produção"
                 field="numeroOrdem"
@@ -302,6 +430,7 @@ function RelatorioConciliacoes() {
             ) : (
               getSortedItems.map((conciliacao, index) => (
                 <TableRow key={`${conciliacao.ordemId}-${index}`}>
+                  <TableCell>{conciliacao.codigoConciliacao}</TableCell>
                   <TableCell>{conciliacao.numeroOrdem}</TableCell>
                   <TableCell>{conciliacao.dataConciliacao}</TableCell>
                   <TableCell>{conciliacao.dataPagamento}</TableCell>
@@ -319,6 +448,22 @@ function RelatorioConciliacoes() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Snackbar para mensagens */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

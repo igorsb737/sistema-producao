@@ -21,6 +21,9 @@ import {
   Button,
   Checkbox,
   IconButton,
+  Snackbar,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -52,13 +55,23 @@ function ConciliacaoPagamentos() {
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const { ordens } = useOrdemProducao();
-  const { buscarPagamentosPorFornecedor, criarConciliacao } = usePagamentos();
+  const { buscarPagamentosPorFornecedor, criarConciliacao, enviarConciliacaoParaBling } = usePagamentos();
   const { getServicoById } = useServicos();
 
   const [fornecedorId, setFornecedorId] = useState('');
   const [dataPagamento, setDataPagamento] = useState<Date | null>(null);
   const [lancamentos, setLancamentos] = useState<LancamentoSelecionado[]>([]);
   const [loading, setLoading] = useState(false);
+  const [processando, setProcessando] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
 
   const carregarLancamentos = useCallback(async (fornecedorIdParam?: string) => {
     const idToUse = fornecedorIdParam || fornecedorId;
@@ -108,18 +121,28 @@ function ConciliacaoPagamentos() {
 
   const handleConciliar = async () => {
     if (!fornecedorId || !dataPagamento) {
-      alert('Selecione o fornecedor e a data de pagamento');
+      setSnackbar({
+        open: true,
+        message: 'Selecione o fornecedor e a data de pagamento',
+        severity: 'warning',
+      });
       return;
     }
 
     const lancamentosSelecionados = lancamentos.filter(l => l.checked);
     if (lancamentosSelecionados.length === 0) {
-      alert('Selecione pelo menos um lançamento para conciliar');
+      setSnackbar({
+        open: true,
+        message: 'Selecione pelo menos um lançamento para conciliar',
+        severity: 'warning',
+      });
       return;
     }
 
+    setProcessando(true);
     try {
-      await criarConciliacao(
+      // Passo 1: Criar a conciliação
+      const codigo = await criarConciliacao(
         format(dataPagamento, 'dd-MM-yyyy'),
         lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor, quantidade, servicoId }) => ({
           ordemId,
@@ -131,12 +154,47 @@ function ConciliacaoPagamentos() {
         }))
       );
 
-      alert('Conciliação criada com sucesso!');
-      navigate('/ordens/pagamento');
+      setSnackbar({
+        open: true,
+        message: `Conciliação ${codigo} criada com sucesso! Enviando para o Bling...`,
+        severity: 'info',
+      });
+
+      // Passo 2: Enviar para o Bling
+      try {
+        await enviarConciliacaoParaBling(codigo);
+        setSnackbar({
+          open: true,
+          message: `Conciliação ${codigo} criada e enviada com sucesso para o Bling!`,
+          severity: 'success',
+        });
+        
+        // Redirecionar após sucesso
+        setTimeout(() => {
+          navigate('/ordens/pagamento');
+        }, 2000);
+      } catch (blingError) {
+        console.error('Erro ao enviar para o Bling:', blingError);
+        setSnackbar({
+          open: true,
+          message: `Conciliação criada, mas houve um erro ao enviar para o Bling: ${blingError instanceof Error ? blingError.message : 'Erro desconhecido'}`,
+          severity: 'error',
+        });
+      }
     } catch (error) {
       console.error('Erro ao criar conciliação:', error);
-      alert('Erro ao criar conciliação. Tente novamente.');
+      setSnackbar({
+        open: true,
+        message: `Erro ao criar conciliação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        severity: 'error',
+      });
+    } finally {
+      setProcessando(false);
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   const getOrdemInfo = useCallback((ordemId: string) => {
@@ -188,9 +246,10 @@ function ConciliacaoPagamentos() {
             <Button
               variant="contained"
               onClick={handleConciliar}
-              disabled={!fornecedorId || !dataPagamento || lancamentos.filter(l => l.checked).length === 0}
+              disabled={processando || !fornecedorId || !dataPagamento || lancamentos.filter(l => l.checked).length === 0}
+              startIcon={processando ? <CircularProgress size={20} color="inherit" /> : null}
             >
-              Conciliar Selecionados
+              {processando ? 'Processando...' : 'Conciliar e Enviar'}
             </Button>
           </Box>
         </Box>
@@ -361,6 +420,22 @@ function ConciliacaoPagamentos() {
             </Typography>
           </Paper>
         )}
+
+        {/* Snackbar para mensagens */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={handleCloseSnackbar} 
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );
