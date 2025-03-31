@@ -522,7 +522,7 @@ export const usePagamentos = () => {
             // 3 - Parcialmente recebido
             // 4 - Devolvido
             // 5 - Cancelado
-            let novoStatus = '';
+            let novoStatus: 'Pendente' | 'Enviado' | 'Pago' | 'Parcialmente Pago' | 'Devolvido' | 'Cancelado' = 'Enviado';
             
             switch (statusBling) {
               case 1:
@@ -540,8 +540,6 @@ export const usePagamentos = () => {
               case 5:
                 novoStatus = 'Cancelado';
                 break;
-              default:
-                novoStatus = 'Enviado'; // Status padrão se não for reconhecido
             }
             
             console.log(`Mapeando status Bling ${statusBling} para status da conciliação: ${novoStatus}`);
