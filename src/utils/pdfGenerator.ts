@@ -220,10 +220,27 @@ export const generateOrdemPDF = (ordem: OrdemProducao) => {
       { align: 'center' }
     );
     
-    // Salvar o PDF com o nome da ordem
-    doc.save(`ordem-producao-${ordem.informacoesGerais.numero}.pdf`);
+    // Retornar o buffer do PDF
+    const pdfBuffer = doc.output('datauristring').split(',')[1];
+    return pdfBuffer;
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
-    alert('Erro ao gerar o PDF. Verifique o console para mais detalhes.');
+    throw new Error('Erro ao gerar o PDF');
+  }
+};
+
+export const downloadOrdemPDF = (ordem: OrdemProducao) => {
+  try {
+    const pdfBuffer = generateOrdemPDF(ordem);
+    const blob = new Blob([atob(pdfBuffer)], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ordem-producao-${ordem.informacoesGerais.numero}.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Erro ao baixar PDF:', error);
+    alert('Erro ao baixar o PDF. Verifique o console para mais detalhes.');
   }
 };

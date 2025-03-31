@@ -1,12 +1,19 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { useOrdemProducao, Status } from '../../hooks/useOrdemProducao';
-import { Box, Typography, Paper, CircularProgress, Grid, Chip, Button } from '@mui/material';
-import { PictureAsPdf as PdfIcon } from '@mui/icons-material';
-import { generateOrdemPDF } from '../../utils/pdfGenerator';
+import { Box, Typography, Paper, CircularProgress, Grid, Chip, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar } from '@mui/material';
+import { PictureAsPdf as PdfIcon, Email as EmailIcon } from '@mui/icons-material';
+import { generateOrdemPDF, downloadOrdemPDF } from '../../utils/pdfGenerator';
+import { useEmail } from '../../hooks/useEmail';
+import { useState } from 'react';
 
 function VisualizarOrdem() {
   const { id } = useParams();
   const { ordens, loading, error } = useOrdemProducao();
+  const { sendEmail, loading: sendingEmail, error: emailError } = useEmail();
+  const [openEmailDialog, setOpenEmailDialog] = useState(false);
+  const [emailTo, setEmailTo] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   
   if (loading) {
     return (
@@ -39,20 +46,46 @@ function VisualizarOrdem() {
     return <Navigate to={`/ordens/editar/${ordem.informacoesGerais.numero}`} replace />;
   }
 
+  const handleSendEmail = async () => {
+    try {
+      const pdfBuffer = generateOrdemPDF(ordem);
+      await sendEmail({
+        to: emailTo,
+        pdfBuffer,
+        opNumber: ordem.informacoesGerais.numero
+      });
+      setOpenEmailDialog(false);
+      setSnackbarMessage('Email enviado com sucesso!');
+      setSnackbarOpen(true);
+    } catch (err) {
+      setSnackbarMessage('Erro ao enviar email. Tente novamente.');
+      setSnackbarOpen(true);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4">
           Ordem de Produção #{ordem.informacoesGerais.numero}
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<PdfIcon />}
-          onClick={() => generateOrdemPDF(ordem)}
-        >
-          Baixar PDF
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PdfIcon />}
+            onClick={() => downloadOrdemPDF(ordem)}
+          >
+            Baixar PDF
+          </Button>
+          <IconButton
+            color="primary"
+            onClick={() => setOpenEmailDialog(true)}
+            title="Enviar por Email"
+          >
+            <EmailIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       <Paper sx={{ p: 3 }}>
@@ -228,6 +261,39 @@ function VisualizarOrdem() {
           </Grid>
         </Grid>
       </Paper>
+
+      <Dialog open={openEmailDialog} onClose={() => setOpenEmailDialog(false)}>
+        <DialogTitle>Enviar Ordem de Produção por Email</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={emailTo}
+            onChange={(e) => setEmailTo(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEmailDialog(false)}>Cancelar</Button>
+          <Button 
+            onClick={handleSendEmail} 
+            variant="contained" 
+            disabled={!emailTo || sendingEmail}
+          >
+            {sendingEmail ? 'Enviando...' : 'Enviar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+      />
     </Box>
   );
 }

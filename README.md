@@ -1,50 +1,67 @@
-# React + TypeScript + Vite
+# Sistema de Ordem de Produção
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Deploy no Vercel
 
-Currently, two official plugins are available:
+### Pré-requisitos
+- Conta no Vercel
+- Git instalado
+- Node.js instalado
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Passos para Deploy
 
-## Expanding the ESLint configuration
+1. Faça login no Vercel e importe o projeto do Git
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+2. Configure as seguintes variáveis de ambiente no Vercel:
+```
+EMAIL_HOST=smtp.hostinger.com
+EMAIL_PORT=465
+EMAIL_USER=producao@disquecamisetas.com.br
+EMAIL_PASS=Prod010203!
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+3. O Vercel detectará automaticamente que é um projeto Vite e configurará o build command como:
 ```
+npm run vercel-build
+```
+
+4. Após o deploy, o endpoint de email estará disponível em:
+```
+https://seu-dominio.vercel.app/api/email/send
+```
+
+### Desenvolvimento Local
+
+1. Clone o repositório
+```bash
+git clone <url-do-repositorio>
+```
+
+2. Instale as dependências
+```bash
+npm install
+```
+
+3. Crie um arquivo `.env.local` com as configurações:
+```
+EMAIL_HOST=smtp.hostinger.com
+EMAIL_PORT=465
+EMAIL_USER=producao@disquecamisetas.com.br
+EMAIL_PASS=Prod010203!
+```
+
+4. Execute o projeto
+```bash
+npm run dev
+```
+
+### Estrutura do Projeto
+
+- `/api/email/send.js` - Função serverless para envio de email
+- `/src/hooks/useEmail.ts` - Hook React para integração com a API
+- `/src/utils/pdfGenerator.ts` - Gerador de PDF
+- `/src/pages/OrdemProducao/VisualizarOrdem.tsx` - Componente com botão de envio
+
+### Notas
+- O envio de email usa o SMTP da Hostinger
+- O PDF é gerado no cliente e enviado como base64
+- As credenciais de email devem ser mantidas seguras no Vercel
