@@ -30,7 +30,7 @@ interface EntradaEstoqueBling {
   observacoes: string;
 }
 
-// Interface para conta a pagar no Bling
+// Interface para conta a pagar no Bling -
 interface ContaPagarBling {
   vencimento: string;
   valor: number;
