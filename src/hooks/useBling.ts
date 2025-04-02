@@ -104,22 +104,17 @@ export const useBling = () => {
       // Detectar ambiente de produção ou desenvolvimento
       const isProduction = window.location.hostname !== 'localhost';
       
-      // Usar URL completa em produção ou URL relativa em desenvolvimento
-      const baseUrl = isProduction 
-        ? 'https://bling.apoioservidoria.top/api/bling/produtos' 
-        : '/api/bling/produtos';
-      
       // Construir URL com parâmetros
-      const url = new URL(baseUrl, isProduction ? undefined : window.location.origin);
-      url.searchParams.append('pagina', pagina.toString());
-      url.searchParams.append('criterio', criterio);
-      url.searchParams.append('idCategoria', idCategoria);
+      const baseUrl = isProduction 
+        ? `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&idCategoria=${idCategoria}`
+        : `/api/bling/produtos?pagina=${pagina}&criterio=${criterio}&idCategoria=${idCategoria}`;
+      
+      console.log('Buscando produtos usando URL:', baseUrl);
 
-      console.log('Buscando produtos usando URL:', url.toString());
-
-      const response = await fetch(url.toString(), {
+      const response = await fetch(baseUrl, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
       });
 
