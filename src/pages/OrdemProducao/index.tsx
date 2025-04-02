@@ -26,7 +26,7 @@ import { Add as AddIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSorting } from '../../hooks/useSorting';
 import { TableSortableHeader } from '../../components/TableSortableHeader';
-import { generateOrdemPDF } from '../../utils/pdfGenerator';
+import { downloadOrdemPDF } from '../../utils/pdfGenerator';
 
 function OrdemProducaoPage() {
   const navigate = useNavigate();
@@ -336,7 +336,7 @@ function OrdemProducaoPage() {
                         color="primary"
                         onClick={(e) => {
                           e.stopPropagation();
-                          generateOrdemPDF(ordem);
+                          downloadOrdemPDF(ordem);
                         }}
                       >
                         <PdfIcon />
