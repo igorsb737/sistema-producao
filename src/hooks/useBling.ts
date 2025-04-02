@@ -101,20 +101,37 @@ export const useBling = () => {
 
   const fetchProdutos = async (token: string, pagina: number = 1, idCategoria: string = '10316508', criterio: string = '2'): Promise<ProdutoBling[]> => {
     try {
-      const url = new URL('/api/bling/produtos', window.location.origin);
+      // Detectar ambiente de produção ou desenvolvimento
+      const isProduction = window.location.hostname !== 'localhost';
+      
+      // Usar URL completa em produção ou URL relativa em desenvolvimento
+      const baseUrl = isProduction 
+        ? 'https://bling.apoioservidoria.top/api/bling/produtos' 
+        : '/api/bling/produtos';
+      
+      // Construir URL com parâmetros
+      const url = new URL(baseUrl, isProduction ? undefined : window.location.origin);
       url.searchParams.append('pagina', pagina.toString());
       url.searchParams.append('criterio', criterio);
       url.searchParams.append('idCategoria', idCategoria);
 
-      const response = await fetch(url, {
+      console.log('Buscando produtos usando URL:', url.toString());
+
+      const response = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Resposta de erro completa:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+        } catch (parseError) {
+          throw new Error(`Erro ${response.status}: ${response.statusText}. Resposta não é JSON válido.`);
+        }
       }
 
       const data = await response.json();
