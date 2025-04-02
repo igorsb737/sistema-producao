@@ -57,12 +57,8 @@ export const useBling = () => {
 
   const atualizarToken = async (): Promise<string> => {
     try {
-      // Tenta fazer a requisição diretamente para o endpoint completo
-      // em vez de depender do proxy em produção
-      const isProduction = window.location.hostname !== 'localhost';
-      const webhookUrl = isProduction 
-        ? 'https://n8n.apoioservidoria.top/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a'
-        : '/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a';
+      // Usar sempre o mesmo padrão de URL com proxy, independente do ambiente
+      const webhookUrl = '/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a';
         
       console.log('Atualizando token usando URL:', webhookUrl);
       
@@ -101,13 +97,8 @@ export const useBling = () => {
 
   const fetchProdutos = async (token: string, pagina: number = 1, idCategoria: string = '10316508', criterio: string = '2'): Promise<ProdutoBling[]> => {
     try {
-      // Detectar ambiente de produção ou desenvolvimento
-      const isProduction = window.location.hostname !== 'localhost';
-      
-      // Construir URL com parâmetros
-      const baseUrl = isProduction 
-        ? `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&idCategoria=${idCategoria}`
-        : `/api/bling/produtos?pagina=${pagina}&criterio=${criterio}&idCategoria=${idCategoria}`;
+      // Usar sempre o mesmo padrão de URL com proxy, independente do ambiente
+      const baseUrl = `/api/bling/produtos?pagina=${pagina}&idCategoria=${idCategoria}`;
       
       console.log('Buscando produtos usando URL:', baseUrl);
 

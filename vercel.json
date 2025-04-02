@@ -13,6 +13,17 @@
   ],
   "routes": [
     {
+      "src": "/api/bling/(.*)",
+      "dest": "https://api.bling.com.br/Api/v3/$1",
+      "headers": {
+        "Accept": "application/json"
+      }
+    },
+    {
+      "src": "/webhook/(.*)",
+      "dest": "https://n8n.apoioservidoria.top/webhook/$1"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
