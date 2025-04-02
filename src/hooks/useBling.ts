@@ -57,7 +57,16 @@ export const useBling = () => {
 
   const atualizarToken = async (): Promise<string> => {
     try {
-      const response = await fetch('/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a', {
+      // Tenta fazer a requisição diretamente para o endpoint completo
+      // em vez de depender do proxy em produção
+      const isProduction = window.location.hostname !== 'localhost';
+      const webhookUrl = isProduction 
+        ? 'https://n8n.apoioservidoria.top/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a'
+        : '/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a';
+        
+      console.log('Atualizando token usando URL:', webhookUrl);
+      
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
