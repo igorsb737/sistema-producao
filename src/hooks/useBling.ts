@@ -57,8 +57,14 @@ export const useBling = () => {
 
   const atualizarToken = async (): Promise<string> => {
     try {
-      // Usar sempre o mesmo padrão de URL com proxy, independente do ambiente
-      const webhookUrl = '/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a';
+      // Detectar ambiente (produção ou desenvolvimento)
+      const isProduction = window.location.hostname !== 'localhost' && 
+                          !window.location.hostname.includes('127.0.0.1');
+      
+      // URL base conforme o ambiente
+      const webhookUrl = isProduction
+        ? 'https://n8n.apoioservidoria.top/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a'
+        : '/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a';
         
       console.log('Atualizando token usando URL:', webhookUrl);
       
@@ -487,11 +493,22 @@ export const useBling = () => {
         observacoes
       };
 
-      // Usa o proxy configurado no vite.config.ts
-      const response = await fetch('/api/bling/estoques', {
+      // Detectar ambiente (produção ou desenvolvimento)
+      const isProduction = window.location.hostname !== 'localhost' && 
+                          !window.location.hostname.includes('127.0.0.1');
+      
+      // URL base conforme o ambiente
+      const url = isProduction 
+        ? 'https://bling.apoioservidoria.top/api/bling/estoques'
+        : '/api/bling/estoques';
+
+      console.log('Registrando entrada de estoque usando URL:', url);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(dadosEntrada)
@@ -535,11 +552,22 @@ export const useBling = () => {
         observacoes
       };
 
-      // Usa o proxy configurado no vite.config.ts
-      const response = await fetch('/api/bling/estoques', {
+      // Detectar ambiente (produção ou desenvolvimento)
+      const isProduction = window.location.hostname !== 'localhost' && 
+                          !window.location.hostname.includes('127.0.0.1');
+      
+      // URL base conforme o ambiente
+      const url = isProduction 
+        ? 'https://bling.apoioservidoria.top/api/bling/estoques'
+        : '/api/bling/estoques';
+
+      console.log('Registrando saída de estoque usando URL:', url);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(dadosSaida)
