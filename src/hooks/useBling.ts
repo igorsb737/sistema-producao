@@ -467,14 +467,8 @@ export const useBling = () => {
         observacoes
       };
 
-      // Detectar ambiente (produção ou desenvolvimento)
-      const isProduction = window.location.hostname !== 'localhost' && 
-                          !window.location.hostname.includes('127.0.0.1');
-      
-      // URL base conforme o ambiente
-      const url = isProduction 
-        ? 'https://bling.apoioservidoria.top/api/bling/estoques'
-        : '/api/bling/estoques';
+      // Usar sempre o proxy configurado no vite.config.ts
+      const url = '/api/bling/estoques';
 
       console.log('Registrando entrada de estoque usando URL:', url);
 
@@ -526,14 +520,8 @@ export const useBling = () => {
         observacoes
       };
 
-      // Detectar ambiente (produção ou desenvolvimento)
-      const isProduction = window.location.hostname !== 'localhost' && 
-                          !window.location.hostname.includes('127.0.0.1');
-      
-      // URL base conforme o ambiente
-      const url = isProduction 
-        ? 'https://bling.apoioservidoria.top/api/bling/estoques'
-        : '/api/bling/estoques';
+      // Usar sempre o proxy configurado no vite.config.ts
+      const url = '/api/bling/estoques';
 
       console.log('Registrando saída de estoque usando URL:', url);
 
