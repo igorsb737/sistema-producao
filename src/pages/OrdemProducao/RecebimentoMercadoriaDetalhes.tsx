@@ -204,7 +204,7 @@ function RecebimentoMercadoriaDetalhes() {
         );
         
         if (!desejaRegistrarParcial) {
-          alert('Operação cancelada pelo usuário.');
+          alert('Operação cancelada pelo usuário. Nenhum recebimento foi registrado.');
           setEnviandoParaBling(false);
           return;
         }
@@ -220,8 +220,13 @@ function RecebimentoMercadoriaDetalhes() {
       }
 
       if (errosBling.length > 0) {
-        // Se houve erros no Bling, mas alguns itens foram registrados
-        alert(`Recebimento parcial registrado com sucesso. Alguns itens não puderam ser enviados para o Bling. Verifique os detalhes dos erros.`);
+        if (itensProcessadosComSucesso.length > 0) {
+          // Se houve erros no Bling, mas alguns itens foram registrados
+          alert(`ATENÇÃO: Recebimento PARCIAL registrado. Alguns itens NÃO puderam ser enviados para o Bling devido a erros. Verifique os detalhes dos erros.`);
+        } else {
+          // Se todos os itens falharam
+          alert(`ERRO: Nenhum recebimento foi registrado devido a falhas na integração com o Bling.`);
+        }
       } else {
         alert('Recebimento registrado com sucesso e enviado para o Bling!');
       }

@@ -57,45 +57,19 @@ export const useBling = () => {
 
   const atualizarToken = async (): Promise<string> => {
     try {
-      // Detectar ambiente (produção ou desenvolvimento)
-      const isProduction = window.location.hostname !== 'localhost' && 
-                          !window.location.hostname.includes('127.0.0.1');
+      console.log('Obtendo token diretamente do Firebase');
       
-      // URL base conforme o ambiente
-      const webhookUrl = isProduction
-        ? 'https://n8n.apoioservidoria.top/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a'
-        : '/webhook/05e988fe-20b1-4d45-872a-b88d3c1b5c8a';
-        
-      console.log('Atualizando token usando URL:', webhookUrl);
-      
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({})
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao atualizar token: Status ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      if (!data) {
-        throw new Error('Resposta vazia do webhook');
-      }
-      
-      // Busca o token atualizado
+      // Busca o token diretamente do Firebase
       const apiRef = ref(database, 'api/api');
       const snapshot = await get(apiRef);
+      
       if (!snapshot.exists()) {
         throw new Error('Token não encontrado no Firebase');
       }
+      
       return snapshot.val();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar token';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao obter token';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
