@@ -151,7 +151,8 @@ function ConciliacaoPagamentos() {
           valor,
           quantidade,
           servicoId,
-        }))
+        })),
+        fornecedorId // Passando o fornecedorId selecionado na interface
       );
 
       setSnackbar({
@@ -271,10 +272,15 @@ function ConciliacaoPagamentos() {
                   .filter((f) => f.situacao === 'A')
                   .map((fornecedor) => (
                     <MenuItem key={fornecedor.id} value={fornecedor.id}>
-                      {fornecedor.nome}
+                      {fornecedor.nome} <Typography component="span" color="text.secondary" sx={{ ml: 1 }}>({fornecedor.id})</Typography>
                     </MenuItem>
                   ))}
               </Select>
+              {fornecedorId && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                  ID do fornecedor: {fornecedorId}
+                </Typography>
+              )}
             </FormControl>
 
             <DatePicker

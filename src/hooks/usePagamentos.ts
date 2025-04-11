@@ -157,7 +157,8 @@ export const usePagamentos = () => {
       valor: number;
       quantidade: number;
       servicoId: string;
-    }>
+    }>,
+    fornecedorIdSelecionado: string
   ): Promise<string> => {
     try {
       const dataAtual = new Date();
@@ -170,17 +171,9 @@ export const usePagamentos = () => {
         second: '2-digit'
       }).replace(/\//g, '-');
       
-      // Extrair o fornecedorId do primeiro lançamento (todos têm o mesmo fornecedor)
-      let fornecedorId = '';
-      if (lancamentosSelecionados.length > 0) {
-        const primeiroLancamento = lancamentosSelecionados[0];
-        const pagamentoRef = ref(database, `ordens/${primeiroLancamento.ordemId}/pagamentos/${primeiroLancamento.pagamentoId}`);
-        const snapshot = await get(pagamentoRef);
-        if (snapshot.exists()) {
-          const pagamento = snapshot.val();
-          fornecedorId = pagamento.lancamentos[primeiroLancamento.lancamentoIndex]?.fornecedorId || '';
-        }
-      }
+      // Usar o fornecedorId selecionado na interface em vez de extraí-lo do lançamento
+      const fornecedorId = fornecedorIdSelecionado;
+      console.log(`[CONCILIAÇÃO] Usando fornecedor selecionado na interface: ID="${fornecedorId}"`);
       
       // Gerar código sequencial (C00001, C00002, etc.)
       const contadorRef = ref(database, 'contadores/conciliacoes');
@@ -311,6 +304,8 @@ export const usePagamentos = () => {
     codigoConciliacao: string
   ): Promise<boolean> => {
     try {
+      console.log(`[CONCILIAÇÃO] Iniciando envio da conciliação ${codigoConciliacao} para o Bling`);
+      
       // Buscar dados da conciliação
       const conciliacoesRef = ref(database, 'conciliacoes');
       const snapshot = await get(conciliacoesRef);
@@ -336,6 +331,8 @@ export const usePagamentos = () => {
         throw new Error(`Conciliação ${codigoConciliacao} não encontrada`);
       }
 
+      console.log(`[CONCILIAÇÃO] Dados encontrados: ID=${conciliacaoKey}, FornecedorID=${conciliacaoEncontrada.fornecedorId}, Total=${conciliacaoEncontrada.total}`);
+
       // Buscar nome do fornecedor diretamente da coleção 'fornecedores'
       const fornecedoresRef = ref(database, 'fornecedores');
       const fornecedoresSnapshot = await get(fornecedoresRef);
@@ -345,16 +342,20 @@ export const usePagamentos = () => {
       }
 
       const fornecedores = fornecedoresSnapshot.val();
+      console.log(`[FORNECEDORES] Total de fornecedores no Firebase: ${Object.values(fornecedores).length}`);
+      
       // Procurar o fornecedor pelo ID
       let fornecedorNome = '';
       for (const fornecedor of Object.values<any>(fornecedores)) {
         if (fornecedor.id === conciliacaoEncontrada.fornecedorId) {
           fornecedorNome = fornecedor.nome;
+          console.log(`[FORNECEDOR] Encontrado: ID=${fornecedor.id}, Nome=${fornecedor.nome}`);
           break;
         }
       }
 
       if (!fornecedorNome) {
+        console.error(`[ERRO] Fornecedor com ID ${conciliacaoEncontrada.fornecedorId} não encontrado`);
         throw new Error(`Fornecedor com ID ${conciliacaoEncontrada.fornecedorId} não encontrado`);
       }
 
@@ -365,6 +366,8 @@ export const usePagamentos = () => {
       // Formatar histórico
       const historico = `Conciliação ${codigoConciliacao}`;
 
+      console.log(`[BLING] Enviando conciliação: Fornecedor="${fornecedorNome}", ID="${conciliacaoEncontrada.fornecedorId}", Valor=${conciliacaoEncontrada.total}, Vencimento=${dataVencimento}`);
+      
       // Enviar para o Bling
       const resultado = await registrarContaPagar(
         fornecedorNome,

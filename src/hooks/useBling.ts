@@ -562,34 +562,100 @@ export const useBling = () => {
     setLoadingContaPagar(true);
     setError(null);
     try {
+      console.log(`[BLING] Registrando conta a pagar: Fornecedor="${fornecedorNome}", ID="${fornecedorId || 'não fornecido'}"`);
+      
       // Busca o token do Bling
       const token = await atualizarToken();
       
       let fornecedor: FornecedorBling | null = null;
       
+      // Buscar todos os fornecedores uma única vez
+      const fornecedoresRef = ref(database, 'fornecedores');
+      const snapshot = await get(fornecedoresRef);
+      
+      if (!snapshot.exists()) {
+        throw new Error('Nenhum fornecedor encontrado no Firebase');
+      }
+      
+      const fornecedores = snapshot.val();
+      console.log(`[FORNECEDORES] Buscando fornecedor entre ${Object.values(fornecedores).length} registros`);
+      
       // Se fornecedorId foi fornecido, busca diretamente pelo ID
       if (fornecedorId) {
-        const fornecedoresRef = ref(database, 'fornecedores');
-        const snapshot = await get(fornecedoresRef);
+        console.log(`[FORNECEDOR] Buscando pelo ID: "${fornecedorId}"`);
+        // Normalizar o ID para string para garantir comparação correta
+        const fornecedorIdStr = String(fornecedorId).trim();
         
-        if (snapshot.exists()) {
-          const fornecedores = snapshot.val();
-          fornecedor = Object.values(fornecedores).find(
-            (f: any) => f.id === fornecedorId
-          ) as FornecedorBling | undefined || null;
+        console.log(`[FORNECEDOR] ID normalizado para busca: "${fornecedorIdStr}"`);
+        
+        // Buscar por correspondência exata de string
+        for (const f of Object.values<any>(fornecedores)) {
+          const idStr = String(f.id).trim();
+          console.log(`[FORNECEDOR] Comparando com: ID="${idStr}", Nome="${f.nome}"`);
+          
+          // Verificar se os IDs são iguais (como string)
+          if (idStr === fornecedorIdStr) {
+            fornecedor = f;
+            console.log(`[FORNECEDOR] Encontrado pelo ID: "${f.id}", Nome: "${f.nome}"`);
+            break;
+          }
+        }
+        
+        // Se não encontrou, tenta converter para número e comparar
+        if (!fornecedor) {
+          console.log(`[FORNECEDOR] Tentando comparação numérica`);
+          const fornecedorIdNum = Number(fornecedorIdStr);
+          
+          if (!isNaN(fornecedorIdNum)) {
+            for (const f of Object.values<any>(fornecedores)) {
+              const idNum = Number(String(f.id).trim());
+              if (!isNaN(idNum) && idNum === fornecedorIdNum) {
+                fornecedor = f;
+                console.log(`[FORNECEDOR] Encontrado pelo ID numérico: "${f.id}", Nome: "${f.nome}"`);
+                break;
+              }
+            }
+          }
         }
       }
       
       // Se não encontrou pelo ID ou ID não foi fornecido, tenta pelo nome
-      if (!fornecedor) {
-        fornecedor = await getFornecedorByNome(fornecedorNome);
+      if (!fornecedor && fornecedorNome) {
+        console.log(`[FORNECEDOR] Buscando pelo nome: "${fornecedorNome}"`);
+        const fornecedorNomeNormalizado = fornecedorNome.trim().toLowerCase();
+        
+        // Buscar por correspondência exata de nome (case insensitive)
+        for (const f of Object.values<any>(fornecedores)) {
+          const nomeNormalizado = f.nome.trim().toLowerCase();
+          if (nomeNormalizado === fornecedorNomeNormalizado) {
+            fornecedor = f;
+            console.log(`[FORNECEDOR] Encontrado pelo nome exato: "${f.id}", Nome: "${f.nome}"`);
+            break;
+          }
+        }
+        
+        // Se ainda não encontrou, tenta busca menos restritiva
+        if (!fornecedor) {
+          console.log(`[FORNECEDOR] Tentando busca por correspondência parcial`);
+          // Buscar por nome contido (para casos onde o nome pode ter variações)
+          for (const f of Object.values<any>(fornecedores)) {
+            const nomeNormalizado = f.nome.trim().toLowerCase();
+            if (nomeNormalizado.includes(fornecedorNomeNormalizado) || 
+                fornecedorNomeNormalizado.includes(nomeNormalizado)) {
+              fornecedor = f;
+              console.log(`[FORNECEDOR] Encontrado por correspondência parcial: "${f.id}", Nome: "${f.nome}"`);
+              break;
+            }
+          }
+        }
       }
       
       if (!fornecedor) {
-        throw new Error(`Fornecedor não encontrado: ${fornecedorNome} (ID: ${fornecedorId || 'não fornecido'})`);
+        console.error(`[ERRO] Fornecedor não encontrado: "${fornecedorNome}" (ID: "${fornecedorId || 'não fornecido'}")`);
+        throw new Error(`Fornecedor não encontrado: "${fornecedorNome}" (ID: "${fornecedorId || 'não fornecido'}")`);
       }
 
-      console.log('Fornecedor encontrado:', fornecedor);
+      console.log(`[FORNECEDOR] Selecionado para envio: ID="${fornecedor.id}", Nome="${fornecedor.nome}"`);
 
       // Formata a data de hoje para o formato YYYY-MM-DD
       const hoje = new Date();
@@ -610,7 +676,16 @@ export const useBling = () => {
         competencia: dataEmissao, // Usando a data de hoje como competência
         historico
       };
-
+      
+      // Log dos dados que serão enviados para o Bling (equivalente ao curl)
+      console.log(`[BLING] Dados da requisição:
+URL: /api/bling/contas/pagar
+Método: POST
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer ${token.substring(0, 10)}...
+Body: ${JSON.stringify(dadosContaPagar, null, 2)}`);
+      
       // Usa o proxy configurado no vite.config.ts
       const response = await fetch('/api/bling/contas/pagar', {
         method: 'POST',
@@ -623,15 +698,18 @@ export const useBling = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error(`[ERRO] Resposta de erro do Bling: ${JSON.stringify(errorData)}`);
         throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
       }
 
       // Processar a resposta para obter o ID da conta a pagar
       const responseData = await response.json();
-      console.log('Resposta do Bling (conta a pagar):', responseData);
+      console.log(`[BLING] Resposta de sucesso: ${JSON.stringify(responseData)}`);
       
       // Extrair o ID da conta a pagar da resposta
       const contaPagarId = responseData?.data?.id;
+      
+      console.log(`[BLING] Conta a pagar registrada com sucesso. ID: "${contaPagarId || 'não retornado'}"`);
       
       return { 
         success: true,
