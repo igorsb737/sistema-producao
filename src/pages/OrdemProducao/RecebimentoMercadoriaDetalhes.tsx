@@ -114,21 +114,35 @@ function RecebimentoMercadoriaDetalhes() {
     );
   };
 
-  const handleEntrarMercadoria = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrosBling([]);
+    setEnviandoParaBling(true);
+    
     try {
-      setEnviandoParaBling(true);
-      setErrosBling([]);
-      
-      // Filtra apenas itens com quantidade recebida maior que 0
+      // Validação básica
       const itensParaReceber = itensRecebimento.filter(
         (item) => item.quantidadeRecebida > 0
       );
 
       if (itensParaReceber.length === 0) {
-        alert('Nenhuma quantidade informada para recebimento');
+        alert('Nenhum item selecionado para recebimento.');
         setEnviandoParaBling(false);
         return;
       }
+
+      // Verifica se todos os itens têm quantidade válida
+      for (const item of itensParaReceber) {
+        if (item.quantidadeRecebida <= 0) {
+          alert(`Por favor, informe uma quantidade válida para o item ${item.nome}.`);
+          setEnviandoParaBling(false);
+          return;
+        }
+      }
+
+      // Array para armazenar itens que foram processados com sucesso no Bling
+      const itensProcessadosComSucesso = [];
+      let houveErro = false;
 
       // Encontra a ordem correspondente para cada item
       for (const item of itensParaReceber) {
@@ -152,12 +166,20 @@ function RecebimentoMercadoriaDetalhes() {
             observacoes
           );
           
-          // Somente após sucesso no Bling, registra o recebimento no sistema interno
-          await registrarRecebimento(ordem.id, item.gradeId, {
-            quantidade: item.quantidadeRecebida,
-            data: dataFormatada,
+          // Se chegou aqui, o registro no Bling foi bem-sucedido
+          // Adiciona o item à lista de itens processados com sucesso
+          itensProcessadosComSucesso.push({
+            ordem,
+            gradeId: item.gradeId,
+            recebimento: {
+              quantidade: item.quantidadeRecebida,
+              data: dataFormatada,
+            }
           });
         } catch (err) {
+          // Marca que houve erro
+          houveErro = true;
+          
           // Captura erros específicos do Bling
           const mensagemErro = err instanceof Error 
             ? `Erro ao enviar ${item.nome} para o Bling: ${err.message}`
@@ -168,9 +190,38 @@ function RecebimentoMercadoriaDetalhes() {
         }
       }
 
+      // Se houve algum erro, pergunta ao usuário se deseja continuar com os itens que deram certo
+      if (houveErro) {
+        if (itensProcessadosComSucesso.length === 0) {
+          // Se nenhum item foi processado com sucesso, não registra nada
+          alert('Não foi possível registrar nenhum recebimento devido a erros na integração com o Bling. Verifique os erros e tente novamente.');
+          setEnviandoParaBling(false);
+          return;
+        }
+        
+        const desejaRegistrarParcial = window.confirm(
+          `Alguns itens não puderam ser enviados para o Bling. Deseja registrar apenas os itens que foram processados com sucesso?`
+        );
+        
+        if (!desejaRegistrarParcial) {
+          alert('Operação cancelada pelo usuário.');
+          setEnviandoParaBling(false);
+          return;
+        }
+      }
+
+      // Registra no Firebase apenas os itens que foram processados com sucesso no Bling
+      for (const item of itensProcessadosComSucesso) {
+        await registrarRecebimento(
+          item.ordem.id,
+          item.gradeId,
+          item.recebimento
+        );
+      }
+
       if (errosBling.length > 0) {
-        // Se houve erros no Bling, mas o recebimento interno foi registrado
-        alert(`Recebimento registrado com sucesso, mas houve erros ao enviar para o Bling. Verifique o console para mais detalhes.`);
+        // Se houve erros no Bling, mas alguns itens foram registrados
+        alert(`Recebimento parcial registrado com sucesso. Alguns itens não puderam ser enviados para o Bling. Verifique os detalhes dos erros.`);
       } else {
         alert('Recebimento registrado com sucesso e enviado para o Bling!');
       }
@@ -214,7 +265,7 @@ function RecebimentoMercadoriaDetalhes() {
           </Button>
           <Button
             variant="contained"
-            onClick={handleEntrarMercadoria}
+            onClick={handleSubmit}
             disabled={itensRecebimento.every((item) => item.quantidadeRecebida === 0) || enviandoParaBling}
           >
             {enviandoParaBling ? 'Processando...' : 'Entrar Mercadoria'}
