@@ -556,7 +556,8 @@ export const useBling = () => {
     vencimento: string,
     numeroDocumento: string,
     historico: string,
-    categoriaId: number = 14690272799
+    categoriaId: number = 14690272799,
+    fornecedorId?: string // Parâmetro opcional para o ID do fornecedor
   ): Promise<{ success: boolean; id?: string }> => {
     setLoadingContaPagar(true);
     setError(null);
@@ -564,11 +565,31 @@ export const useBling = () => {
       // Busca o token do Bling
       const token = await atualizarToken();
       
-      // Busca o fornecedor pelo nome
-      const fornecedor = await getFornecedorByNome(fornecedorNome);
-      if (!fornecedor) {
-        throw new Error(`Fornecedor não encontrado: ${fornecedorNome}`);
+      let fornecedor: FornecedorBling | null = null;
+      
+      // Se fornecedorId foi fornecido, busca diretamente pelo ID
+      if (fornecedorId) {
+        const fornecedoresRef = ref(database, 'fornecedores');
+        const snapshot = await get(fornecedoresRef);
+        
+        if (snapshot.exists()) {
+          const fornecedores = snapshot.val();
+          fornecedor = Object.values(fornecedores).find(
+            (f: any) => f.id === fornecedorId
+          ) as FornecedorBling | undefined || null;
+        }
       }
+      
+      // Se não encontrou pelo ID ou ID não foi fornecido, tenta pelo nome
+      if (!fornecedor) {
+        fornecedor = await getFornecedorByNome(fornecedorNome);
+      }
+      
+      if (!fornecedor) {
+        throw new Error(`Fornecedor não encontrado: ${fornecedorNome} (ID: ${fornecedorId || 'não fornecido'})`);
+      }
+
+      console.log('Fornecedor encontrado:', fornecedor);
 
       // Formata a data de hoje para o formato YYYY-MM-DD
       const hoje = new Date();

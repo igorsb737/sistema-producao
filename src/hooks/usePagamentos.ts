@@ -26,7 +26,6 @@ export interface ConciliacaoPagamento {
   }>;
   codigoConciliacao?: string;
   blingContaPagarId?: string; // ID da conta a pagar no Bling
-  blingContasPagarIds?: Record<string, string>; // IDs das contas a pagar no Bling por fornecedor
 }
 
 export interface Pagamento {
@@ -337,148 +336,97 @@ export const usePagamentos = () => {
         throw new Error(`Conciliação ${codigoConciliacao} não encontrada`);
       }
 
-      // Buscar fornecedores do Firebase
+      // Buscar nome do fornecedor diretamente da coleção 'fornecedores'
       const fornecedoresRef = ref(database, 'fornecedores');
       const fornecedoresSnapshot = await get(fornecedoresRef);
       
       if (!fornecedoresSnapshot.exists()) {
         throw new Error('Nenhum fornecedor encontrado no banco de dados');
       }
+
       const fornecedores = fornecedoresSnapshot.val();
-
-      // Agrupar lançamentos por fornecedor
-      const lancamentosPorFornecedor: Record<string, {
-        fornecedorId: string,
-        fornecedorNome: string,
-        lancamentos: Array<any>,
-        total: number
-      }> = {};
-
-      // Para cada lançamento na conciliação
-      for (const lancamento of conciliacaoEncontrada.lancamentos) {
-        // Buscar o fornecedorId do lançamento original
-        const pagamentoRef = ref(database, `ordens/${lancamento.ordemId}/pagamentos/${lancamento.pagamentoId}`);
-        const pagamentoSnapshot = await get(pagamentoRef);
-        
-        if (pagamentoSnapshot.exists()) {
-          const pagamento = pagamentoSnapshot.val();
-          const lancamentoOriginal = pagamento.lancamentos[lancamento.lancamentoIndex];
-          
-          if (lancamentoOriginal && lancamentoOriginal.fornecedorId) {
-            const fornecedorId = lancamentoOriginal.fornecedorId;
-            
-            // Buscar nome do fornecedor
-            let fornecedorNome = '';
-            for (const fornecedor of Object.values<any>(fornecedores)) {
-              if (fornecedor.id === fornecedorId) {
-                fornecedorNome = fornecedor.nome;
-                break;
-              }
-            }
-            
-            if (!fornecedorNome) {
-              console.warn(`Fornecedor com ID ${fornecedorId} não encontrado, pulando lançamento`);
-              continue;
-            }
-            
-            // Adicionar ao grupo do fornecedor
-            if (!lancamentosPorFornecedor[fornecedorId]) {
-              lancamentosPorFornecedor[fornecedorId] = {
-                fornecedorId,
-                fornecedorNome,
-                lancamentos: [],
-                total: 0
-              };
-            }
-            
-            lancamentosPorFornecedor[fornecedorId].lancamentos.push(lancamento);
-            lancamentosPorFornecedor[fornecedorId].total += lancamento.valor;
-          }
+      // Procurar o fornecedor pelo ID
+      let fornecedorNome = '';
+      for (const fornecedor of Object.values<any>(fornecedores)) {
+        if (fornecedor.id === conciliacaoEncontrada.fornecedorId) {
+          fornecedorNome = fornecedor.nome;
+          break;
         }
       }
-      
+
+      if (!fornecedorNome) {
+        throw new Error(`Fornecedor com ID ${conciliacaoEncontrada.fornecedorId} não encontrado`);
+      }
+
       // Formatar data de vencimento para o formato YYYY-MM-DD
       const dataPagamentoPartes = conciliacaoEncontrada.dataPagamento.split('-');
       const dataVencimento = `${dataPagamentoPartes[2]}-${dataPagamentoPartes[1]}-${dataPagamentoPartes[0]}`;
 
-      // Verificar se temos fornecedores para processar
-      if (Object.keys(lancamentosPorFornecedor).length === 0) {
-        throw new Error('Nenhum fornecedor válido encontrado para os lançamentos da conciliação');
-      }
-      
-      console.log(`Processando ${Object.keys(lancamentosPorFornecedor).length} fornecedores para a conciliação ${codigoConciliacao}`);
-      
-      // Objeto para armazenar os IDs das contas a pagar criadas no Bling
-      const blingContasPagarIds: Record<string, string> = {};
-      
-      // Enviar uma conta a pagar para cada fornecedor
-      for (const [fornecedorId, dados] of Object.entries(lancamentosPorFornecedor)) {
-        // Formatar histórico
-        const historico = `Conciliação ${codigoConciliacao} - ${dados.fornecedorNome}`;
-        
-        console.log(`Enviando conta a pagar para ${dados.fornecedorNome} no valor de ${dados.total}`);
-        
-        // Enviar para o Bling
-        try {
-          const resultado = await registrarContaPagar(
-            dados.fornecedorNome,
-            dados.total,
-            dataVencimento,
-            `${codigoConciliacao}-${fornecedorId.substring(0, 4)}`,
-            historico
+      // Formatar histórico
+      const historico = `Conciliação ${codigoConciliacao}`;
+
+      // Enviar para o Bling
+      const resultado = await registrarContaPagar(
+        fornecedorNome,
+        conciliacaoEncontrada.total,
+        dataVencimento,
+        codigoConciliacao,
+        historico,
+        14690272799, // ID da categoria padrão
+        conciliacaoEncontrada.fornecedorId // Passando o ID do fornecedor diretamente
+      );
+
+      // Verificar se o ID da conta a pagar foi retornado
+      if (resultado.success && resultado.id) {
+        // Atualizar status da conciliação para 'Enviado' e salvar o ID da conta a pagar
+        const conciliacaoRef = ref(database, `conciliacoes/${conciliacaoKey}`);
+        await set(conciliacaoRef, {
+          ...conciliacaoEncontrada,
+          status: 'Enviado',
+          blingContaPagarId: resultado.id
+        });
+
+        // Atualizar status em todos os pagamentos relacionados e salvar o ID da conta a pagar
+        for (const lancamento of conciliacaoEncontrada.lancamentos) {
+          const pagamentoRef = ref(
+            database,
+            `ordens/${lancamento.ordemId}/pagamentos/${lancamento.pagamentoId}`
           );
           
-          // Armazenar o ID da conta a pagar
-          if (resultado.success && resultado.id) {
-            blingContasPagarIds[fornecedorId] = resultado.id;
-            console.log(`Conta a pagar criada com sucesso para ${dados.fornecedorNome}, ID: ${resultado.id}`);
+          const pagamentoSnapshot = await get(pagamentoRef);
+          if (pagamentoSnapshot.exists()) {
+            const pagamento = pagamentoSnapshot.val() as Pagamento;
+            if (pagamento.conciliacao) {
+              await set(pagamentoRef, {
+                ...pagamento,
+                conciliacao: {
+                  ...pagamento.conciliacao,
+                  status: 'Enviado',
+                  blingContaPagarId: resultado.id
+                }
+              });
+            }
           }
-        } catch (err) {
-          console.error(`Erro ao registrar conta a pagar para ${dados.fornecedorNome}:`, err);
-          // Continua para o próximo fornecedor mesmo se houver erro
         }
-      }
-      
-      // Verificar se pelo menos uma conta a pagar foi criada com sucesso
-      const algumaSucesso = Object.keys(blingContasPagarIds).length > 0;
-      
-      // Atualizar a conciliação no Firebase com os IDs das contas a pagar
-      const conciliacaoRef = ref(database, `conciliacoes/${conciliacaoKey}`);
-      await set(conciliacaoRef, {
-        ...conciliacaoEncontrada,
-        status: 'Enviado',
-        blingContasPagarIds: blingContasPagarIds, // Novo campo para armazenar múltiplos IDs
-        blingContaPagarId: Object.values(blingContasPagarIds)[0] || null // Manter compatibilidade com código existente
-      });
-      
-      // Atualizar status em todos os pagamentos relacionados
-      for (const lancamento of conciliacaoEncontrada.lancamentos) {
-        const pagamentoRef = ref(
-          database,
-          `ordens/${lancamento.ordemId}/pagamentos/${lancamento.pagamentoId}`
-        );
-        
-        const pagamentoSnapshot = await get(pagamentoRef);
-        if (pagamentoSnapshot.exists()) {
-          const pagamento = pagamentoSnapshot.val() as Pagamento;
-          if (pagamento.conciliacao) {
-            // Buscar o fornecedorId do lançamento
-            const lancamentoOriginal = pagamento.lancamentos[lancamento.lancamentoIndex];
-            const fornecedorId = lancamentoOriginal?.fornecedorId;
-            
-            await set(pagamentoRef, {
-              ...pagamento,
-              conciliacao: {
-                ...pagamento.conciliacao,
-                status: 'Enviado',
-                blingContaPagarId: fornecedorId ? blingContasPagarIds[fornecedorId] || null : null
-              }
-            });
-          }
+      } else {
+        // Se não recebeu o ID, apenas atualiza o status
+        const conciliacaoRef = ref(database, `conciliacoes/${conciliacaoKey}`);
+        await set(conciliacaoRef, {
+          ...conciliacaoEncontrada,
+          status: 'Enviado'
+        });
+
+        // Atualizar status em todos os pagamentos relacionados
+        for (const lancamento of conciliacaoEncontrada.lancamentos) {
+          await atualizarStatusConciliacao(
+            lancamento.ordemId,
+            lancamento.pagamentoId,
+            'Enviado'
+          );
         }
       }
 
-      return algumaSucesso;
+      return true;
     } catch (err) {
       console.error('Erro ao enviar conciliação para o Bling:', err);
       throw new Error(`Erro ao enviar conciliação para o Bling: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
