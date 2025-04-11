@@ -141,22 +141,22 @@ function RecebimentoMercadoriaDetalhes() {
         // Formata a data no padrão dd-MM-yyyy
         const dataFormatada = format(item.dataRecebimento, 'dd-MM-yyyy');
 
-        // Registra o recebimento no sistema interno
-        await registrarRecebimento(ordem.id, item.gradeId, {
-          quantidade: item.quantidadeRecebida,
-          data: dataFormatada,
-        });
-
         // Prepara observações para o Bling
         const observacoes = `UP ${item.ordemNumero} - Qtd: ${item.quantidadeRecebida} - Data: ${dataFormatada}`;
         
         try {
-          // Registra entrada no estoque do Bling
+          // Primeiro, registra entrada no estoque do Bling
           await registrarEntradaEstoque(
             item.nome,
             item.quantidadeRecebida,
             observacoes
           );
+          
+          // Somente após sucesso no Bling, registra o recebimento no sistema interno
+          await registrarRecebimento(ordem.id, item.gradeId, {
+            quantidade: item.quantidadeRecebida,
+            data: dataFormatada,
+          });
         } catch (err) {
           // Captura erros específicos do Bling
           const mensagemErro = err instanceof Error 
