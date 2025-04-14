@@ -29,6 +29,8 @@ import {
 import { Assessment as AssessmentIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useSorting } from '../../hooks/useSorting';
 import { TableSortableHeader } from '../../components/TableSortableHeader';
+import { ref, get } from 'firebase/database';
+import { database } from '../../config/firebase';
 
 interface Filtros {
   fornecedorId: string;
@@ -40,7 +42,7 @@ interface Filtros {
 interface Conciliacao {
   id?: string; 
   ordemId: string;
-  numeroOrdem: string;
+  numeroOrdem: string | string[];
   dataConciliacao: string;
   dataPagamento: string;
   item: string;
@@ -54,6 +56,7 @@ interface Conciliacao {
   codigoConciliacao?: string;
   blingContaPagarId?: string; 
   lancamentos?: Array<any>; 
+  fornecedorNome: string;
 }
 
 function RelatorioConciliacoes() {
@@ -85,77 +88,116 @@ function RelatorioConciliacoes() {
   });
 
   const buscarConciliacoes = async () => {
-    setLoading(true);
     try {
-      const conciliacoesTemp: Conciliacao[] = [];
+      setLoading(true);
+      setSnackbar({
+        open: false,
+        message: '',
+        severity: 'info',
+      });
       
-      for (const ordem of ordens) {
-        const pagamentos = await buscarPagamentos(ordem.id);
-        
-        const pagamentosConciliados = pagamentos.filter(p => p.conciliacao);
-        
-        for (const pagamento of pagamentosConciliados) {
-          const lancamentosFiltrados = pagamento.lancamentos.filter(l => {
-            const matchFornecedor = !filtros.fornecedorId || l.fornecedorId === filtros.fornecedorId;
-            const matchServico = !filtros.servicoId || l.servicoId === filtros.servicoId;
-            const matchData = !filtros.dataPagamento || 
-              pagamento.conciliacao?.dataPagamento.includes(filtros.dataPagamento);
-            const matchCodigo = !filtros.codigoConciliacao || 
-              (pagamento.conciliacao?.codigoConciliacao && 
-               pagamento.conciliacao.codigoConciliacao.toLowerCase().includes(filtros.codigoConciliacao.toLowerCase()));
-            
-            return matchFornecedor && matchServico && matchData && matchCodigo;
-          });
-
-          if (lancamentosFiltrados.length > 0) {
-            let conciliacaoId = '';
-            let blingContaPagarId = '';
-            
-            if (pagamento.conciliacao?.codigoConciliacao) {
-              conciliacaoId = pagamento.conciliacao.codigoConciliacao;
-              blingContaPagarId = pagamento.conciliacao.blingContaPagarId || '';
-            }
-            
-            for (const lancamento of lancamentosFiltrados) {
-              const lancamentoConciliado = pagamento.conciliacao?.lancamentosSelecionados.find(
-                l => l.index === lancamentosFiltrados.indexOf(lancamento)
-              );
-              
-              const servico = getServicoById(lancamentoConciliado?.servicoId || lancamento.servicoId);
-              
-              conciliacoesTemp.push({
-                id: conciliacaoId,
-                ordemId: ordem.id,
-                numeroOrdem: ordem.informacoesGerais.numero,
-                dataConciliacao: pagamento.conciliacao?.dataConciliacao || '',
-                dataPagamento: pagamento.conciliacao?.dataPagamento || '',
-                item: ordem.solicitacao.item.nome,
-                cliente: ordem.informacoesGerais.cliente,
-                statusPedido: ordem.informacoesGerais.status,
-                servico: servico?.nome || 'N/A',
-                quantidadeConciliada: lancamento.quantidade,
-                valor: lancamento.valor,
-                total: lancamento.total,
-                statusConciliacao: pagamento.conciliacao?.status || 'N/A',
-                codigoConciliacao: pagamento.conciliacao?.codigoConciliacao || 'N/A',
-                blingContaPagarId: blingContaPagarId,
-                lancamentos: [{ 
-                  ordemId: ordem.id, 
-                  pagamentoId: pagamento.id, 
-                  lancamentoIndex: lancamentosFiltrados.indexOf(lancamento)
-                }]
-              });
+      // Buscar conciliações diretamente da coleção 'conciliacoes'
+      const conciliacoesRef = ref(database, 'conciliacoes');
+      const conciliacoesSnapshot = await get(conciliacoesRef);
+      
+      if (!conciliacoesSnapshot.exists()) {
+        setLoading(false);
+        setConciliacoes([]);
+        return;
+      }
+      
+      const conciliacoesData = conciliacoesSnapshot.val();
+      let conciliacoesList: any[] = [];
+      
+      // Processar as conciliações
+      for (const [id, conciliacao] of Object.entries<any>(conciliacoesData)) {
+        // Verificar se a conciliação atende aos critérios de filtro
+        if (
+          (!filtros.fornecedorId || conciliacao.fornecedorId === filtros.fornecedorId) &&
+          (!filtros.servicoId || conciliacao.servicoId === filtros.servicoId) &&
+          (!filtros.dataPagamento || conciliacao.dataPagamento === filtros.dataPagamento) &&
+          (!filtros.codigoConciliacao || conciliacao.codigoConciliacao === filtros.codigoConciliacao)
+        ) {
+          // Buscar nome do fornecedor
+          let fornecedorNome = '';
+          if (conciliacao.fornecedorId && fornecedores) {
+            const fornecedor = fornecedores.find(f => f.id === conciliacao.fornecedorId);
+            if (fornecedor) {
+              fornecedorNome = fornecedor.nome;
             }
           }
+          
+          // Buscar informações de todas as ordens envolvidas
+          let ordensInfo = [];
+          let numerosOrdens = [];
+          let itensOrdens = [];
+          let clientesOrdens = [];
+          let statusPedidosOrdens = [];
+          let servicosOrdens = [];
+
+          if (conciliacao.lancamentos && conciliacao.lancamentos.length > 0) {
+            // Coletar todos os ordemId únicos
+            const ordemIdsUnicos = [...new Set(conciliacao.lancamentos.map((l: any) => l.ordemId).filter(Boolean))];
+            for (const ordemId of ordemIdsUnicos) {
+              const ordem = ordens.find(o => o.id === ordemId);
+              if (ordem) {
+                ordensInfo.push(ordem);
+                numerosOrdens.push(ordem.informacoesGerais?.numero || '');
+                itensOrdens.push(ordem.solicitacao?.item?.nome || '');
+                clientesOrdens.push(ordem.informacoesGerais?.cliente || '');
+                statusPedidosOrdens.push(ordem.informacoesGerais?.status || '');
+                let servicoNomeOuId = '';
+                // Tentar pegar servicoId da ordem
+                const servicoId = ordem.solicitacao?.servicoId;
+                if (servicoId && servicos) {
+                  const servico = servicos.find(s => s.id === servicoId);
+                  if (servico && servico.nome) {
+                    servicoNomeOuId = servico.nome;
+                  } else {
+                    servicoNomeOuId = servicoId; // fallback para mostrar o id
+                  }
+                }
+                if (servicoNomeOuId) servicosOrdens.push(servicoNomeOuId);
+              }
+            }
+          }
+
+          // Garantir que todas as propriedades necessárias estejam definidas
+          conciliacoesList.push({
+            id,
+            ordemId: numerosOrdens.join(', '),
+            numeroOrdem: numerosOrdens,
+            dataConciliacao: conciliacao.dataConciliacao || '',
+            dataPagamento: conciliacao.dataPagamento || '',
+            item: itensOrdens.join(', '),
+            cliente: clientesOrdens.join(', '),
+            statusPedido: statusPedidosOrdens.join(', '),
+            servico: Array.from(new Set(servicosOrdens.filter(Boolean))).join(', '),
+            quantidadeConciliada: conciliacao.lancamentos?.reduce((sum: number, l: any) => sum + (Number(l.quantidade) || 0), 0) || 0,
+            valor: conciliacao.total ? Number(conciliacao.total) : 0,
+            total: conciliacao.total ? Number(conciliacao.total) : 0,
+            statusConciliacao: conciliacao.status || 'N/A',
+            codigoConciliacao: conciliacao.codigoConciliacao || '',
+            blingContaPagarId: conciliacao.blingContaPagarId || '',
+            lancamentos: conciliacao.lancamentos || [],
+            fornecedorNome
+          });
         }
       }
       
-      setConciliacoes(conciliacoesTemp);
+      // Ordenar por data de conciliação (mais recente primeiro)
+      conciliacoesList.sort((a, b) => {
+        const dataA = new Date(a.dataConciliacao.split('-').reverse().join('-'));
+        const dataB = new Date(b.dataConciliacao.split('-').reverse().join('-'));
+        return dataB.getTime() - dataA.getTime();
+      });
+      
+      setConciliacoes(conciliacoesList);
     } catch (error) {
       console.error('Erro ao buscar conciliações:', error);
       setSnackbar({
         open: true,
-        message: 'Erro ao buscar conciliações. Tente novamente.',
+        message: `Erro ao buscar conciliações: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         severity: 'error',
       });
     } finally {
@@ -412,18 +454,24 @@ function RelatorioConciliacoes() {
                 sortConfigs={sortConfigs}
                 onSort={requestSort}
               />
+              <TableSortableHeader
+                label="Fornecedor"
+                field="fornecedorNome"
+                sortConfigs={sortConfigs}
+                onSort={requestSort}
+              />
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} align="center">
+                <TableCell colSpan={12} align="center">
                   <Typography>Carregando...</Typography>
                 </TableCell>
               </TableRow>
             ) : getSortedItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} align="center">
+                <TableCell colSpan={12} align="center">
                   <Typography>Nenhuma conciliação encontrada</Typography>
                 </TableCell>
               </TableRow>
@@ -431,7 +479,7 @@ function RelatorioConciliacoes() {
               getSortedItems.map((conciliacao, index) => (
                 <TableRow key={`${conciliacao.ordemId}-${index}`}>
                   <TableCell>{conciliacao.codigoConciliacao}</TableCell>
-                  <TableCell>{conciliacao.numeroOrdem}</TableCell>
+                  <TableCell>{Array.isArray(conciliacao.numeroOrdem) ? conciliacao.numeroOrdem.join(', ') : conciliacao.numeroOrdem}</TableCell>
                   <TableCell>{conciliacao.dataConciliacao}</TableCell>
                   <TableCell>{conciliacao.dataPagamento}</TableCell>
                   <TableCell>{conciliacao.item}</TableCell>
@@ -439,9 +487,10 @@ function RelatorioConciliacoes() {
                   <TableCell>{conciliacao.statusPedido}</TableCell>
                   <TableCell>{conciliacao.servico}</TableCell>
                   <TableCell align="right">{conciliacao.quantidadeConciliada}</TableCell>
-                  <TableCell align="right">R$ {conciliacao.valor.toFixed(2)}</TableCell>
-                  <TableCell align="right">R$ {conciliacao.total.toFixed(2)}</TableCell>
+                  <TableCell align="right">R$ {(conciliacao.valor !== undefined ? Number(conciliacao.valor).toFixed(2) : '0.00')}</TableCell>
+                  <TableCell align="right">R$ {(conciliacao.total !== undefined ? Number(conciliacao.total).toFixed(2) : '0.00')}</TableCell>
                   <TableCell>{conciliacao.statusConciliacao}</TableCell>
+                  <TableCell>{conciliacao.fornecedorNome}</TableCell>
                 </TableRow>
               ))
             )}

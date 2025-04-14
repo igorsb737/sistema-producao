@@ -121,7 +121,7 @@ function PagamentoOrdens() {
           <Typography color="error">{error}</Typography>
         </Box>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>

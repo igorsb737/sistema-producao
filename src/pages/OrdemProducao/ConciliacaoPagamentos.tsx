@@ -4,6 +4,8 @@ import { usePagamentos } from '../../hooks/usePagamentos';
 import { useFornecedores } from '../../hooks/useFornecedores';
 import { useOrdemProducao } from '../../hooks/useOrdemProducao';
 import { useServicos } from '../../hooks/useServicos';
+import { ref, get } from 'firebase/database';
+import { database } from '../../config/firebase';
 import {
   Box,
   Typography,
@@ -82,27 +84,53 @@ function ConciliacaoPagamentos() {
 
     setLoading(true);
     try {
-      const pagamentos = await buscarPagamentosPorFornecedor(idToUse);
+      // Buscar pagamentos do fornecedor
+      const pagamentosPorFornecedor = await buscarPagamentosPorFornecedor(idToUse);
       
-      const lancamentosFiltrados = pagamentos.flatMap(({ ordemId, pagamento }) =>
-          (pagamento.lancamentos || []).map((lancamento, index) => ({
-            ordemId,
-            pagamentoId: pagamento.id,
-            lancamentoIndex: index,
-            valor: Number(lancamento.total) || 0,
-            quantidade: Number(lancamento.quantidade) || 0,
-            servicoId: lancamento.servicoId,
-            checked: false,
-          }))
-        );
+      // Para cada pagamento, precisamos buscar o pagamento completo
+      // para obter os índices originais dos lançamentos
+      const lancamentosFiltrados: LancamentoSelecionado[] = [];
+      
+      for (const { ordemId, pagamento } of pagamentosPorFornecedor) {
+        // Buscar o pagamento completo
+        const pagamentoRef = ref(database, `ordens/${ordemId}/pagamentos/${pagamento.id}`);
+        const snapshot = await get(pagamentoRef);
+        
+        if (snapshot.exists()) {
+          const pagamentoCompleto = snapshot.val();
+          
+          // Verificar cada lançamento do pagamento completo
+          if (Array.isArray(pagamentoCompleto.lancamentos)) {
+            pagamentoCompleto.lancamentos.forEach((lancamentoCompleto: any, indexOriginal: number) => {
+              // Verificar se o lançamento pertence ao fornecedor e não está conciliado
+              if (lancamentoCompleto.fornecedorId === idToUse && !lancamentoCompleto.conciliacao) {
+                lancamentosFiltrados.push({
+                  ordemId,
+                  pagamentoId: pagamento.id,
+                  lancamentoIndex: indexOriginal, // Este é o índice original no pagamento completo
+                  valor: Number(lancamentoCompleto.total) || 0,
+                  quantidade: Number(lancamentoCompleto.quantidade) || 0,
+                  servicoId: lancamentoCompleto.servicoId,
+                  checked: false,
+                });
+              }
+            });
+          }
+        }
+      }
 
       setLancamentos(lancamentosFiltrados);
     } catch (error) {
       console.error('Erro ao carregar lançamentos:', error);
+      setSnackbar({
+        open: true,
+        message: `Erro ao carregar lançamentos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
-  }, [fornecedorId, ordens, buscarPagamentosPorFornecedor]);
+  }, [fornecedorId, buscarPagamentosPorFornecedor]);
 
   const handleFornecedorChange = async (novoFornecedorId: string) => {
     setFornecedorId(novoFornecedorId);
@@ -141,18 +169,22 @@ function ConciliacaoPagamentos() {
 
     setProcessando(true);
     try {
+      // Preparar os lançamentos selecionados para conciliação
+      // Usamos diretamente o índice do lançamento que foi selecionado na interface
+      const lancamentosParaConciliar = lancamentosSelecionados.map(lancamento => ({
+        ordemId: lancamento.ordemId,
+        pagamentoId: lancamento.pagamentoId,
+        lancamentoIndex: lancamento.lancamentoIndex,
+        valor: lancamento.valor,
+        quantidade: lancamento.quantidade,
+        servicoId: lancamento.servicoId,
+      }));
+      
       // Passo 1: Criar a conciliação
       const codigo = await criarConciliacao(
         format(dataPagamento, 'dd-MM-yyyy'),
-        lancamentosSelecionados.map(({ ordemId, pagamentoId, lancamentoIndex, valor, quantidade, servicoId }) => ({
-          ordemId,
-          pagamentoId,
-          lancamentoIndex,
-          valor,
-          quantidade,
-          servicoId,
-        })),
-        fornecedorId // Passando o fornecedorId selecionado na interface
+        lancamentosParaConciliar,
+        fornecedorId
       );
 
       setSnackbar({
