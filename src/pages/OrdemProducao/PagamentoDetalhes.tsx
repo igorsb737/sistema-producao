@@ -64,7 +64,7 @@ function PagamentoDetalhes() {
   const [pagamentosExistentes, setPagamentosExistentes] = useState<Array<any>>([]);
   const [conciliacoes, setConciliacoes] = useState<any[]>([]);
 
-  // Carrega os serviços do Firebase
+  // Carrega os serviços do Firebase 
   useEffect(() => {
     const carregarServicos = async () => {
       try {
