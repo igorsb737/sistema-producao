@@ -53,7 +53,12 @@ function ConciliacaoDetalhes() {
     if (!ordem || !pagamento) return;
 
     try {
-      await atualizarStatusConciliacao(ordem.id, pagamento.id, novoStatus);
+      // Corrigir: buscar o índice do lançamento conciliado
+      // Aqui assumo que só há um lançamento conciliado por vez nesta tela
+      const lancamentoIndex = pagamento.lancamentos?.findIndex(
+        (l: any) => l.conciliacao && l.conciliacao.status === pagamento.conciliacao.status
+      ) ?? 0;
+      await atualizarStatusConciliacao(ordem.id, pagamento.id, lancamentoIndex, novoStatus);
       navigate('/ordens/pagamento');
     } catch (error) {
       console.error('Erro ao atualizar status:', error);

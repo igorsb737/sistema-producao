@@ -147,8 +147,8 @@ function RelatorioConciliacoes() {
                 clientesOrdens.push(ordem.informacoesGerais?.cliente || '');
                 statusPedidosOrdens.push(ordem.informacoesGerais?.status || '');
                 let servicoNomeOuId = '';
-                // Tentar pegar servicoId da ordem
-                const servicoId = ordem.solicitacao?.servicoId;
+                // Corrigir: buscar servicoId do item da solicitacao, se existir
+                const servicoId = ordem.solicitacao?.item?.servicoId;
                 if (servicoId && servicos) {
                   const servico = servicos.find(s => s.id === servicoId);
                   if (servico && servico.nome) {

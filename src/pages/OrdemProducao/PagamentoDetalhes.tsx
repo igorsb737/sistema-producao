@@ -62,6 +62,7 @@ function PagamentoDetalhes() {
   const [totalEntregue, setTotalEntregue] = useState(0);
   const [totalPago, setTotalPago] = useState(0);
   const [pagamentosExistentes, setPagamentosExistentes] = useState<Array<any>>([]);
+  const [conciliacoes, setConciliacoes] = useState<any[]>([]);
 
   // Carrega os serviços do Firebase
   useEffect(() => {
@@ -125,6 +126,32 @@ function PagamentoDetalhes() {
       });
     }
   }, [ordens, searchParams]);
+
+  // Carrega conciliações da ordem
+  useEffect(() => {
+    if (!ordem) return;
+    const carregarConciliacoes = async () => {
+      try {
+        const conciliacoesRef = ref(database, 'conciliacoes');
+        const snapshot = await get(conciliacoesRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          // Filtra apenas conciliações desta ordem
+          const lista = Object.values(data).filter((c: any) => c.ordemId === ordem.id);
+          setConciliacoes(lista);
+          // LOG: Veja como estão as conciliações carregadas
+          console.log('Conciliacoes carregadas:', lista);
+        } else {
+          setConciliacoes([]);
+          console.log('Nenhuma conciliação encontrada para a ordem');
+        }
+      } catch (err) {
+        setConciliacoes([]);
+        console.error('Erro ao carregar conciliações:', err);
+      }
+    };
+    carregarConciliacoes();
+  }, [ordem]);
 
   const handleAddLancamento = (index?: number) => {
     if (typeof index === 'number') {
@@ -200,6 +227,19 @@ function PagamentoDetalhes() {
     }
   };
 
+  const isLancamentoConciliado = (pagamentoId: string, lancamentoIndex: number, fornecedorId: string) => {
+    const resultado = conciliacoes.some((conc: any) =>
+      conc.lancamentos && conc.lancamentos.some((l: any) =>
+        l.pagamentoId === pagamentoId &&
+        l.lancamentoIndex === lancamentoIndex &&
+        l.fornecedorId === fornecedorId
+      )
+    );
+    // LOG: Veja cada checagem feita
+    console.log('Verificando lançamento:', { pagamentoId, lancamentoIndex, fornecedorId, resultado });
+    return resultado;
+  };
+
   if (loadingOrdens || loadingFornecedores) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -268,11 +308,12 @@ function PagamentoDetalhes() {
                   pagamento.lancamentos.map((lancamento: any, index: number) => {
                     const fornecedor = fornecedores.find(f => f.id === lancamento.fornecedorId);
                     const servico = servicos.find(s => s.id === lancamento.servicoId);
+                    const conciliado = isLancamentoConciliado(pagamento.id, index, lancamento.fornecedorId);
                     
                     return (
                       <TableRow 
                         key={`${pagamento.id}-${index}`}
-                        sx={pagamento.conciliacao ? {
+                        sx={conciliado ? {
                           backgroundColor: 'rgba(76, 175, 80, 0.08)'
                         } : undefined}
                       >
@@ -283,13 +324,13 @@ function PagamentoDetalhes() {
                         <TableCell align="right">R$ {lancamento.valor.toFixed(2)}</TableCell>
                         <TableCell align="right">R$ {lancamento.total.toFixed(2)}</TableCell>
                         <TableCell>
-                          {pagamento.conciliacao ? (
+                          {conciliado ? (
                             <Button
                               variant="text"
                               color="primary"
                               onClick={() => navigate(`/ordens/pagamento/conciliacao/detalhes?ordem=${ordem.id}&pagamento=${pagamento.id}`)}
                             >
-                              {pagamento.conciliacao.status} ({pagamento.conciliacao.dataPagamento})
+                              Conciliado
                             </Button>
                           ) : 'Não conciliado'}
                         </TableCell>
