@@ -17,12 +17,17 @@ import {
   Grid,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ptBR from 'date-fns/locale/pt-BR';
-import { Add as AddIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import { Add as AddIcon, PictureAsPdf as PdfIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSorting } from '../../hooks/useSorting';
 import { TableSortableHeader } from '../../components/TableSortableHeader';
@@ -30,12 +35,14 @@ import { downloadOrdemPDF } from '../../utils/pdfGenerator';
 
 function OrdemProducaoPage() {
   const navigate = useNavigate();
-  const { ordens, loading, error, recarregarOrdens } = useOrdemProducao();
+  const { ordens, loading, error, recarregarOrdens, excluirOrdem } = useOrdemProducao();
   const [filtroStatus, setFiltroStatus] = useState<string>('');
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroItem, setFiltroItem] = useState('');
   const [filtroDataInicio, setFiltroDataInicio] = useState<Date | null>(null);
   const [filtroDataFim, setFiltroDataFim] = useState<Date | null>(null);
+  const [confirmarExclusao, setConfirmarExclusao] = useState<{ open: boolean; ordemId?: string }>({ open: false });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity?: 'success'|'error' }>({ open: false, message: '' });
 
   const ordensFiltered = ordens.filter((ordem) => {
     const matchStatus = !filtroStatus || ordem.informacoesGerais.status === filtroStatus;
@@ -322,14 +329,14 @@ function OrdemProducaoPage() {
                       return total + (grade.recebimentos?.reduce((sum, rec) => sum + rec.quantidade, 0) || 0);
                     }, 0)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ minWidth: 80, maxWidth: 90, width: 90 }}>
                     <Chip
                       label={ordem.informacoesGerais.status}
                       color={getStatusColor(ordem.informacoesGerais.status)}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableCell onClick={(e) => e.stopPropagation()} sx={{ minWidth: 110, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Tooltip title="Baixar PDF">
                       <IconButton
                         size="small"
@@ -342,6 +349,34 @@ function OrdemProducaoPage() {
                         <PdfIcon />
                       </IconButton>
                     </Tooltip>
+                    {ordem.informacoesGerais.status === 'Aberta' && (
+                      <>
+                        <Tooltip title="Editar">
+                          <IconButton
+                            size="small"
+                            color="info"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/ordens/editar/${ordem.informacoesGerais.numero}`);
+                            }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Excluir">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmarExclusao({ open: true, ordemId: ordem.id });
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -350,6 +385,39 @@ function OrdemProducaoPage() {
         </Table>
       </TableContainer>
       )}
+      {/* Diálogo de confirmação de exclusão */}
+      <Dialog open={confirmarExclusao.open} onClose={() => setConfirmarExclusao({ open: false })}>
+        <DialogTitle>Confirmar exclusão</DialogTitle>
+        <DialogContent>Tem certeza que deseja excluir esta ordem de produção?</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmarExclusao({ open: false })} color="primary">Cancelar</Button>
+          <Button
+            onClick={async () => {
+              if (confirmarExclusao.ordemId) {
+                try {
+                  await excluirOrdem(confirmarExclusao.ordemId);
+                  setSnackbar({ open: true, message: 'Ordem excluída com sucesso!', severity: 'success' });
+                } catch {
+                  setSnackbar({ open: true, message: 'Erro ao excluir ordem.', severity: 'error' });
+                }
+              }
+              setConfirmarExclusao({ open: false });
+            }}
+            color="error"
+            variant="contained"
+          >
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Snackbar de feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }

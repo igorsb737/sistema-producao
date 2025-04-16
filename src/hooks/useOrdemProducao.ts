@@ -1,4 +1,4 @@
-import { ref, push, set, get } from 'firebase/database';
+import { ref, push, set, get, remove } from 'firebase/database';
 import { database } from '../config/firebase';
 import { useState, useEffect } from 'react';
 
@@ -259,9 +259,30 @@ export const useOrdemProducao = () => {
     }
   };
 
-  useEffect(() => {
-    carregarOrdens();
-  }, []);
+  const excluirOrdem = async (id: string) => {
+    try {
+      const ordemRef = ref(database, `ordens/${id}`);
+      await remove(ordemRef);
+      await carregarOrdens();
+    } catch (err) {
+      console.error('Erro ao excluir ordem:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao excluir ordem');
+      throw err;
+    }
+  };
+
+  interface CriarOrdemInput {
+    informacoesGerais: {
+      cliente: string;
+      dataInicio: string;
+      dataEntrega: string;
+      status: Status;
+      observacao?: string;
+      totalCamisetas: number;
+    };
+    solicitacao: Solicitacao;
+    grades: Grades;
+  }
 
   const editarOrdem = async (id: string, ordem: CriarOrdemInput) => {
     try {
@@ -332,6 +353,10 @@ export const useOrdemProducao = () => {
     }
   };
 
+  useEffect(() => {
+    carregarOrdens();
+  }, []);
+
   return {
     ordens,
     loading,
@@ -341,5 +366,6 @@ export const useOrdemProducao = () => {
     editarOrdem,
     registrarRecebimento,
     recarregarOrdens: carregarOrdens,
+    excluirOrdem,
   };
 };
