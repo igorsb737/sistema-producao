@@ -54,9 +54,14 @@ const Layout = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Sistema de Produção
-          </Typography>
+          {/* Trocar o nome pelo logo + texto "loop" (corrigido para Vite) */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            <img
+              src="/assets/loop.png"
+              alt="Loop Logo"
+              style={{ height: 64, marginRight: 12 }}
+            />
+          </Box>
           {user && (
             <div>
               <Button

@@ -63,6 +63,7 @@ function PagamentoDetalhes() {
   const [totalPago, setTotalPago] = useState(0);
   const [pagamentosExistentes, setPagamentosExistentes] = useState<Array<any>>([]);
   const [conciliacoes, setConciliacoes] = useState<any[]>([]);
+  const [fornecedorId, setFornecedorId] = useState<string | null>(null);
 
   // Carrega os serviços do Firebase 
   useEffect(() => {
@@ -136,14 +137,12 @@ function PagamentoDetalhes() {
         const snapshot = await get(conciliacoesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          // Filtra apenas conciliações desta ordem
-          const lista = Object.values(data).filter((c: any) => c.ordemId === ordem.id);
+          const lista = Object.values(data);
           setConciliacoes(lista);
-          // LOG: Veja como estão as conciliações carregadas
-          console.log('Conciliacoes carregadas:', lista);
+          console.log('Conciliacoes carregadas (todas):', lista);
         } else {
           setConciliacoes([]);
-          console.log('Nenhuma conciliação encontrada para a ordem');
+          console.log('Nenhuma conciliação encontrada');
         }
       } catch (err) {
         setConciliacoes([]);
@@ -227,18 +226,36 @@ function PagamentoDetalhes() {
     }
   };
 
-  const isLancamentoConciliado = (pagamentoId: string, lancamentoIndex: number, fornecedorId: string) => {
-    const resultado = conciliacoes.some((conc: any) =>
-      conc.lancamentos && conc.lancamentos.some((l: any) =>
-        l.pagamentoId === pagamentoId &&
-        l.lancamentoIndex === lancamentoIndex &&
-        l.fornecedorId === fornecedorId
+  // Função para verificar se o lançamento está conciliado por pagamento e fornecedor
+  const isLancamentoConciliadoFornecedor = (
+    ordemId: string | number,
+    pagamentoId: string | number,
+    lancamentoIndex: string | number,
+    fornecedorId: string | number
+  ) => {
+    return conciliacoes.some(conc =>
+      String(conc.fornecedorId) === String(fornecedorId) &&
+      conc.lancamentos?.some((l: any) =>
+        String(l.ordemId) === String(ordemId) &&
+        String(l.pagamentoId) === String(pagamentoId) &&
+        Number(l.lancamentoIndex) === Number(lancamentoIndex)
       )
     );
-    // LOG: Veja cada checagem feita
-    console.log('Verificando lançamento:', { pagamentoId, lancamentoIndex, fornecedorId, resultado });
-    return resultado;
   };
+
+  // Função utilitária para calcular o total conciliado apenas para serviços de costura
+  function calcularTotalConciliadoCostura(lancamentos: any[], servicos: any[]): number {
+    return lancamentos
+      .filter(l => {
+        const servico = servicos.find(s => s.id === l.servicoId);
+        return (
+          servico &&
+          (servico.nome === 'Serviço Somente Costura' ||
+            servico.nome === 'Serviço de corte e Costura')
+        );
+      })
+      .reduce((soma, l) => soma + (l.total || 0), 0);
+  }
 
   if (loadingOrdens || loadingFornecedores) {
     return (
@@ -308,7 +325,7 @@ function PagamentoDetalhes() {
                   pagamento.lancamentos.map((lancamento: any, index: number) => {
                     const fornecedor = fornecedores.find(f => f.id === lancamento.fornecedorId);
                     const servico = servicos.find(s => s.id === lancamento.servicoId);
-                    const conciliado = isLancamentoConciliado(pagamento.id, index, lancamento.fornecedorId);
+                    const conciliado = isLancamentoConciliadoFornecedor(ordem.id, pagamento.id, index, lancamento.fornecedorId);
                     
                     return (
                       <TableRow 
@@ -402,9 +419,10 @@ function PagamentoDetalhes() {
                       <InputLabel>Fornecedor</InputLabel>
                       <Select
                         value={lancamento.fornecedorId}
-                        onChange={(e) =>
-                          handleLancamentoChange(index, 'fornecedorId', e.target.value)
-                        }
+                        onChange={(e) => {
+                          handleLancamentoChange(index, 'fornecedorId', e.target.value);
+                          setFornecedorId(e.target.value);
+                        }}
                         label="Fornecedor"
                       >
                         {fornecedores
@@ -526,12 +544,15 @@ function PagamentoDetalhes() {
         </TableContainer>
 
         {/* Totais */}
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', flexDirection: 'column', alignItems: 'flex-end' }}>
           <Typography variant="subtitle1">
             Total Geral: R${' '}
             {lancamentos
               .reduce((total, l) => total + (l.total || 0), 0)
               .toFixed(2)}
+          </Typography>
+          <Typography variant="subtitle2" sx={{ mt: 1 }}>
+            Total Conciliado (Costura): R$ {calcularTotalConciliadoCostura(lancamentos, servicos).toFixed(2)}
           </Typography>
         </Box>
       </Paper>

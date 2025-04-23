@@ -451,6 +451,113 @@ export const usePagamentos = () => {
     }
   };
 
+  const buscarTotaisConciliadosPorTipoServico = async (ordemId: string): Promise<TotaisConciliados> => {
+    try {
+      console.log(`[DEBUG] Iniciando buscarTotaisConciliadosPorTipoServico para ordem ${ordemId}`);
+      
+      // Buscar todos os pagamentos da ordem
+      const pagamentosRef = ref(database, `ordens/${ordemId}/pagamentos`);
+      const pagamentosSnapshot = await get(pagamentosRef);
+      
+      if (!pagamentosSnapshot.exists()) {
+        console.log(`[DEBUG] Nenhum pagamento encontrado para a ordem ${ordemId}`);
+        return { quantidade: 0, valor: 0 };
+      }
+      
+      console.log(`[DEBUG] Pagamentos encontrados para a ordem ${ordemId}`);
+      
+      // Buscar todos os serviços para identificar os de corte e costura
+      const servicosRef = ref(database, 'servicos');
+      const servicosSnapshot = await get(servicosRef);
+      
+      if (!servicosSnapshot.exists()) {
+        console.log('[DEBUG] Nenhum serviço encontrado no banco de dados');
+        return { quantidade: 0, valor: 0 };
+      }
+      
+      const servicosData = servicosSnapshot.val();
+      
+      // Listar todos os serviços para debug
+      console.log('[DEBUG] Lista de todos os serviços:');
+      Object.entries(servicosData).forEach(([id, servicoData]: [string, any]) => {
+        console.log(`ID: ${id}, Nome: ${servicoData.nome}`);
+      });
+      
+      // Lista de nomes de serviços que queremos incluir (mais abrangente)
+      const servicosAlvoNomes = ['corte', 'costura'];
+      
+      // Encontrar os IDs dos serviços que contêm "corte" ou "costura" no nome
+      const servicosAlvoIds: string[] = [];
+      
+      Object.entries(servicosData).forEach(([id, servicoData]: [string, any]) => {
+        const nome = (servicoData.nome || '').toLowerCase();
+        if (servicosAlvoNomes.some(alvoNome => nome.includes(alvoNome))) {
+          servicosAlvoIds.push(id);
+          console.log(`[DEBUG] Serviço alvo encontrado: ID=${id}, Nome=${servicoData.nome}`);
+        }
+      });
+      
+      // Se não encontramos nenhum serviço alvo, usar todos os serviços como fallback
+      if (servicosAlvoIds.length === 0) {
+        console.log('[DEBUG] Nenhum serviço de corte/costura encontrado, usando todos os serviços');
+        Object.keys(servicosData).forEach(id => servicosAlvoIds.push(id));
+      }
+      
+      console.log(`[DEBUG] Total de serviços alvo: ${servicosAlvoIds.length}`);
+      
+      let totalQuantidade = 0;
+      let totalValor = 0;
+      
+      const pagamentosData = pagamentosSnapshot.val();
+      
+      // Para cada pagamento
+      for (const [pagamentoId, pagamento] of Object.entries<any>(pagamentosData)) {
+        console.log(`[DEBUG] Processando pagamento ${pagamentoId}`);
+        
+        if (!pagamento.lancamentos || !Array.isArray(pagamento.lancamentos)) {
+          console.log(`[DEBUG] Pagamento ${pagamentoId} não tem lançamentos válidos`);
+          continue;
+        }
+        
+        console.log(`[DEBUG] Pagamento ${pagamentoId} tem ${pagamento.lancamentos.length} lançamentos`);
+        
+        // Para cada lançamento no pagamento
+        for (let i = 0; i < pagamento.lancamentos.length; i++) {
+          const lancamento = pagamento.lancamentos[i];
+          
+          if (!lancamento) {
+            console.log(`[DEBUG] Lançamento ${i} é nulo ou indefinido`);
+            continue;
+          }
+          
+          console.log(`[DEBUG] Lançamento ${i}: servicoId=${lancamento.servicoId}, conciliacao=${!!lancamento.conciliacao}`);
+          
+          // Verificar se o lançamento está conciliado e é de um serviço alvo
+          if (lancamento.conciliacao && 
+              lancamento.servicoId && 
+              servicosAlvoIds.includes(lancamento.servicoId)) {
+            
+            console.log(`[DEBUG] Lançamento ${i} é válido para contagem: quantidade=${lancamento.quantidade || 0}, valor=${lancamento.total || 0}`);
+            
+            // Somar à quantidade e valor total
+            totalQuantidade += Number(lancamento.quantidade || 0);
+            totalValor += Number(lancamento.total || 0);
+          }
+        }
+      }
+      
+      console.log(`[DEBUG] Resultado final: quantidade=${totalQuantidade}, valor=${totalValor}`);
+      
+      return {
+        quantidade: totalQuantidade,
+        valor: totalValor
+      };
+    } catch (err) {
+      console.error('Erro ao buscar totais conciliados por tipo de serviço:', err);
+      return { quantidade: 0, valor: 0 };
+    }
+  };
+
   const atualizarStatusConciliacoes = async (conciliacoes: Array<any>): Promise<{ atualizadas: number, total: number }> => {
     try {
       let atualizadas = 0;
@@ -545,6 +652,7 @@ export const usePagamentos = () => {
     atualizarStatusConciliacao,
     enviarConciliacaoParaBling,
     buscarTotaisConciliados,
+    buscarTotaisConciliadosPorTipoServico,
     atualizarStatusConciliacoes,
   };
 };

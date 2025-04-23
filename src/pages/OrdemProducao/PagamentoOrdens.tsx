@@ -22,15 +22,17 @@ import { TableSortableHeader } from '../../components/TableSortableHeader';
 function PagamentoOrdens() {
   const navigate = useNavigate();
   const { ordens, loading, error } = useOrdemProducao();
-  const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
+  const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados, buscarTotaisConciliadosPorTipoServico } = usePagamentos();
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});
   const [totaisConciliados, setTotaisConciliados] = useState<Record<string, { quantidade: number; valor: number }>>({});
+  const [totaisConciliadosServicosEspecificos, setTotaisConciliadosServicosEspecificos] = useState<Record<string, { quantidade: number; valor: number }>>({});
 
   // Carrega os pagamentos para cada ordem
   useEffect(() => {
     const carregarDados = async () => {
       const totaisPag: Record<string, { quantidade: number; valor: number }> = {};
       const totaisConc: Record<string, { quantidade: number; valor: number }> = {};
+      const totaisConcEspecificos: Record<string, { quantidade: number; valor: number }> = {};
       
       for (const ordem of ordens) {
         if (ordem.informacoesGerais.status === 'Em Entrega') {
@@ -39,17 +41,21 @@ function PagamentoOrdens() {
           
           // Busca totais conciliados usando o método do hook
           totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
+          
+          // Busca totais conciliados apenas para serviços específicos
+          totaisConcEspecificos[ordem.id] = await buscarTotaisConciliadosPorTipoServico(ordem.id);
         }
       }
       
       setTotaisPagos(totaisPag);
       setTotaisConciliados(totaisConc);
+      setTotaisConciliadosServicosEspecificos(totaisConcEspecificos);
     };
 
     if (ordens.length > 0) {
       carregarDados();
     }
-  }, [ordens, buscarPagamentos, calcularTotalPago, buscarTotaisConciliados]);
+  }, [ordens, buscarPagamentos, calcularTotalPago, buscarTotaisConciliados, buscarTotaisConciliadosPorTipoServico]);
 
   // Filtra apenas ordens com status "Em Entrega"
   const ordensDisponiveis = ordens.filter(
@@ -78,7 +84,7 @@ function PagamentoOrdens() {
     totalEntregue: calcularTotalEntregue(ordem),
     totalLancado: totaisPagos[ordem.id]?.quantidade || 0,
     valorTotalLancado: totaisPagos[ordem.id]?.valor || 0,
-    totalConciliado: totaisConciliados[ordem.id]?.quantidade || 0,
+    totalConciliado: totaisConciliadosServicosEspecificos[ordem.id]?.quantidade || 0,
     valorTotalConciliado: totaisConciliados[ordem.id]?.valor || 0,
     status: ordem.informacoesGerais.status
   }));
@@ -225,7 +231,7 @@ function PagamentoOrdens() {
                     <TableCell>
                       R$ {(totaisPagos[ordem.id]?.valor || 0).toFixed(2)}
                     </TableCell>
-                    <TableCell>{totaisConciliados[ordem.id]?.quantidade || 0}</TableCell>
+                    <TableCell>{totaisConciliadosServicosEspecificos[ordem.id]?.quantidade || 0}</TableCell>
                     <TableCell>
                       {totaisConciliados[ordem.id]?.valor ? (
                         <Button
