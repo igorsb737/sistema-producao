@@ -26,36 +26,46 @@ function PagamentoOrdens() {
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});
   const [totaisConciliados, setTotaisConciliados] = useState<Record<string, { quantidade: number; valor: number }>>({});
   const [totaisConciliadosServicosEspecificos, setTotaisConciliadosServicosEspecificos] = useState<Record<string, { quantidade: number; valor: number }>>({});
+  const [carregandoTotais, setCarregandoTotais] = useState(false);
 
   // Carrega os pagamentos para cada ordem
   useEffect(() => {
     const carregarDados = async () => {
+      if (carregandoTotais) return; // Evita múltiplas chamadas simultâneas
+      
+      setCarregandoTotais(true);
       const totaisPag: Record<string, { quantidade: number; valor: number }> = {};
       const totaisConc: Record<string, { quantidade: number; valor: number }> = {};
       const totaisConcEspecificos: Record<string, { quantidade: number; valor: number }> = {};
       
-      for (const ordem of ordens) {
-        if (ordem.informacoesGerais.status === 'Em Entrega') {
-          const pagamentos = await buscarPagamentos(ordem.id);
-          totaisPag[ordem.id] = calcularTotalPago(pagamentos);
-          
-          // Busca totais conciliados usando o método do hook
-          totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
-          
-          // Busca totais conciliados apenas para serviços específicos
-          totaisConcEspecificos[ordem.id] = await buscarTotaisConciliadosPorTipoServico(ordem.id);
+      try {
+        for (const ordem of ordens) {
+          if (ordem.informacoesGerais.status === 'Em Entrega') {
+            const pagamentos = await buscarPagamentos(ordem.id);
+            totaisPag[ordem.id] = calcularTotalPago(pagamentos);
+            
+            // Busca totais conciliados usando o método do hook
+            totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
+            
+            // Busca totais conciliados apenas para serviços específicos
+            totaisConcEspecificos[ordem.id] = await buscarTotaisConciliadosPorTipoServico(ordem.id);
+          }
         }
+        
+        setTotaisPagos(totaisPag);
+        setTotaisConciliados(totaisConc);
+        setTotaisConciliadosServicosEspecificos(totaisConcEspecificos);
+      } catch (error) {
+        console.error('Erro ao carregar totais:', error);
+      } finally {
+        setCarregandoTotais(false);
       }
-      
-      setTotaisPagos(totaisPag);
-      setTotaisConciliados(totaisConc);
-      setTotaisConciliadosServicosEspecificos(totaisConcEspecificos);
     };
 
     if (ordens.length > 0) {
       carregarDados();
     }
-  }, [ordens, buscarPagamentos, calcularTotalPago, buscarTotaisConciliados, buscarTotaisConciliadosPorTipoServico]);
+  }, [ordens]); // Removidas as funções da lista de dependências
 
   // Filtra apenas ordens com status "Em Entrega"
   const ordensDisponiveis = ordens.filter(
