@@ -50,30 +50,40 @@ export const LancamentoMalha = () => {
 
   const { ordens, recarregarOrdens } = useOrdemProducao();
   const { lancarMalha, loading: loadingLancamento, error } = useLancamentoMalha();
-  const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliados } = usePagamentos();
+  const { buscarPagamentos, calcularTotalPago, buscarTotaisConciliadosPorTipoServico } = usePagamentos();
   const { registrarSaidaEstoque } = useBling();
   const [totaisPagos, setTotaisPagos] = useState<Record<string, { quantidade: number; valor: number }>>({});
   const [totaisConciliados, setTotaisConciliados] = useState<Record<string, { quantidade: number; valor: number }>>({});
+  const [carregandoTotais, setCarregandoTotais] = useState(false);
 
   useEffect(() => {
     const carregarDados = async () => {
+      if (carregandoTotais) return; // Evita múltiplas chamadas simultâneas
+      
+      setCarregandoTotais(true);
       const totaisPag: Record<string, { quantidade: number; valor: number }> = {};
       const totaisConc: Record<string, { quantidade: number; valor: number }> = {};
       
-      for (const ordem of ordens) {
-        const pagamentos = await buscarPagamentos(ordem.id);
-        totaisPag[ordem.id] = calcularTotalPago(pagamentos);
-        totaisConc[ordem.id] = await buscarTotaisConciliados(ordem.id);
+      try {
+        for (const ordem of ordens) {
+          const pagamentos = await buscarPagamentos(ordem.id);
+          totaisPag[ordem.id] = calcularTotalPago(pagamentos);
+          totaisConc[ordem.id] = await buscarTotaisConciliadosPorTipoServico(ordem.id);
+        }
+        
+        setTotaisPagos(totaisPag);
+        setTotaisConciliados(totaisConc);
+      } catch (error) {
+        console.error('Erro ao carregar totais:', error);
+      } finally {
+        setCarregandoTotais(false);
       }
-      
-      setTotaisPagos(totaisPag);
-      setTotaisConciliados(totaisConc);
     };
 
     if (ordens.length > 0) {
       carregarDados();
     }
-  }, [ordens, buscarPagamentos, calcularTotalPago, buscarTotaisConciliados]);
+  }, [ordens]); // Removidas as funções da lista de dependências para evitar loop infinito
 
   const calcularTotalRecebimentos = (ordem: OrdemProducao | null) => {
     if (!ordem || !ordem.grades) return 0;
