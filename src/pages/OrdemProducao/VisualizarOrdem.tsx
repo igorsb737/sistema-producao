@@ -149,32 +149,44 @@ function VisualizarOrdem() {
           </Grid>
 
           <Grid container item xs={12} spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" color="text.secondary">
                 Malha
               </Typography>
               <Typography variant="body1">{ordem.solicitacao.malha.nome || "-"}</Typography>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" color="text.secondary">
                 Previsão Malha
               </Typography>
               <Typography variant="body1">{ordem.solicitacao.previsoes.malha || "-"}</Typography>
             </Grid>
+            <Grid item xs={12} sm={4}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Valor Malha
+              </Typography>
+              <Typography variant="body1">{ordem.solicitacao.previsoes.valorMalha || "-"}</Typography>
+            </Grid>
           </Grid>
 
           <Grid container item xs={12} spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" color="text.secondary">
                 Ribana
               </Typography>
               <Typography variant="body1">{ordem.solicitacao.ribana.nome || "-"}</Typography>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="subtitle2" color="text.secondary">
                 Previsão Ribana
               </Typography>
               <Typography variant="body1">{ordem.solicitacao.previsoes.ribana || "-"}</Typography>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Valor Ribana
+              </Typography>
+              <Typography variant="body1">{ordem.solicitacao.previsoes.valorRibana || "-"}</Typography>
             </Grid>
           </Grid>
 

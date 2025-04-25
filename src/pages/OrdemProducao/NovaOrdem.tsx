@@ -59,6 +59,8 @@ const NovaOrdemProducao = () => {
   const [grades, setGrades] = useState<Grades>({});
   const [previsaoMalha, setPrevisaoMalha] = useState('');
   const [previsaoRibana, setPrevisaoRibana] = useState('');
+  const [valorMalha, setValorMalha] = useState('');
+  const [valorRibana, setValorRibana] = useState('');
   const [observacao, setObservacao] = useState('');
   const [dialogoRemocao, setDialogoRemocao] = useState<{aberto: boolean; gradeId: string | null}>({
     aberto: false,
@@ -111,6 +113,8 @@ const NovaOrdemProducao = () => {
 
         setPrevisaoMalha(ordem.solicitacao.previsoes.malha || '');
         setPrevisaoRibana(ordem.solicitacao.previsoes.ribana || '');
+        setValorMalha(ordem.solicitacao.previsoes.valorMalha || '');
+        setValorRibana(ordem.solicitacao.previsoes.valorRibana || '');
         // Garante que todas as grades tenham o campo mensagensErroCor
         const gradesComMensagens = Object.entries(ordem.grades || {}).reduce((acc, [id, grade]) => {
           acc[id] = {
@@ -180,7 +184,9 @@ const NovaOrdemProducao = () => {
             },
             previsoes: {
               malha: previsaoMalha || '',
-              ribana: previsaoRibana || ''
+              ribana: previsaoRibana || '',
+              valorMalha: valorMalha || '',
+              valorRibana: valorRibana || ''
             }
           },
           grades
@@ -229,6 +235,14 @@ const NovaOrdemProducao = () => {
 
     if (!previsaoRibana) {
       erros.push('Previsão de Consumo de Ribana é obrigatória');
+    }
+
+    if (!valorMalha) {
+      erros.push('Valor de Malha é obrigatório');
+    }
+
+    if (!valorRibana) {
+      erros.push('Valor de Ribana é obrigatório');
     }
 
     // Validação das grades
@@ -280,7 +294,9 @@ const NovaOrdemProducao = () => {
           },
           previsoes: {
             malha: previsaoMalha,
-            ribana: previsaoRibana
+            ribana: previsaoRibana,
+            valorMalha: valorMalha,
+            valorRibana: valorRibana
           }
         },
         grades
@@ -470,7 +486,7 @@ const NovaOrdemProducao = () => {
             </Grid>
           </Grid>
           <Grid item container xs={12} spacing={2}>
-            <Grid item xs={9}>
+            <Grid item xs={6}>
               <Autocomplete
                 options={malhas}
                 value={malhaSelecionada}
@@ -531,7 +547,7 @@ const NovaOrdemProducao = () => {
             </Grid>
             <Grid item xs={3}>
               <TextField
-                label="Previsão de Consumo de Malha"
+                label="Previsão Malha"
                 value={previsaoMalha}
                 onChange={(e) => setPrevisaoMalha(e.target.value)}
                 fullWidth
@@ -541,9 +557,21 @@ const NovaOrdemProducao = () => {
                 }}
               />
             </Grid>
+            <Grid item xs={3}>
+              <TextField
+                label="Valor Malha"
+                value={valorMalha}
+                onChange={(e) => setValorMalha(e.target.value)}
+                fullWidth
+                size="small"
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Grid>
           </Grid>
           <Grid item container xs={12} spacing={2}>
-            <Grid item xs={9}>
+            <Grid item xs={6}>
               <Autocomplete
                 options={ribanas}
                 value={ribanaSelecionada}
@@ -604,9 +632,21 @@ const NovaOrdemProducao = () => {
             </Grid>
             <Grid item xs={3}>
               <TextField
-                label="Previsão de Consumo de Ribana"
+                label="Previsão Ribana"
                 value={previsaoRibana}
                 onChange={(e) => setPrevisaoRibana(e.target.value)}
+                fullWidth
+                size="small"
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                label="Valor Ribana"
+                value={valorRibana}
+                onChange={(e) => setValorRibana(e.target.value)}
                 fullWidth
                 size="small"
                 InputLabelProps={{
@@ -655,7 +695,7 @@ const NovaOrdemProducao = () => {
                       if (corRibana && corGrade && corRibana !== corGrade) {
                         mensagens.push(`Ribana (${corRibana})`);
                       }
-
+                      
                       setGrades(prevGrades => ({
                         ...prevGrades,
                         [gradeId]: {

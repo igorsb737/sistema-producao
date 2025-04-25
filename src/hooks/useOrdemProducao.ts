@@ -52,6 +52,8 @@ interface Item {
 interface Previsoes {
   malha: string;
   ribana: string;
+  valorMalha?: string;
+  valorRibana?: string;
 }
 
 interface Solicitacao {
