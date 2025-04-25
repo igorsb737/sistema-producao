@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Typography, Grid, Paper, Tabs, Tab } from '@mui/material';
 import { useOrdemProducao, OrdemProducao } from '../../hooks/useOrdemProducao';
 import DashboardEficiencia from './DashboardEficiencia';
+import DashboardFluxo from './DashboardFluxo';
 
 // Interface para as propriedades do TabPanel
 interface TabPanelProps {
@@ -127,9 +128,7 @@ const Dashboard = () => {
       
       {/* Conteúdo da aba Fluxo de Produção */}
       <TabPanel value={tabValue} index={3}>
-        <Typography variant="body1">
-          Dashboard de Fluxo de Produção em desenvolvimento.
-        </Typography>
+        <DashboardFluxo />
       </TabPanel>
       
       {/* Conteúdo da aba Qualidade e Desempenho */}

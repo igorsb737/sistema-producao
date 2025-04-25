@@ -49,15 +49,15 @@ Este documento serve como um guia de implementação e acompanhamento para os da
 ## Dashboard 4: Fluxo de Produção
 
 ### Tarefas
-- [ ] Implementar visualização de funil de produção
-  - [ ] Número de ordens em cada estágio
-  - [ ] Tempo médio em cada estágio
-- [ ] Implementar identificação de gargalos no processo
-- [ ] Criar mapa de calor de atividade
-  - [ ] Dias/períodos com maior volume de recebimentos
-  - [ ] Dias/períodos com maior volume de lançamentos
-- [ ] Adicionar filtros por período e tipo de produto
-- [ ] Implementar alertas para ordens paradas há muito tempo em um estágio
+- [X] Implementar visualização de funil de produção
+  - [X] Número de ordens em cada estágio
+  - [X] Tempo médio em cada estágio
+- [X] Implementar identificação de gargalos no processo
+- [X] Criar mapa de calor de atividade
+  - [X] Dias/períodos com maior volume de recebimentos
+  - [X] Dias/períodos com maior volume de lançamentos
+- [X] Adicionar filtros por período e tipo de produto
+- [X] Implementar alertas para ordens paradas há muito tempo em um estágio
 
 ## Dashboard 5: Qualidade e Desempenho
 
@@ -111,3 +111,9 @@ Este documento serve como um guia de implementação e acompanhamento para os da
 | 24/04/2025 | Eficiência de Produção | Filtro inteligente por item | Concluído | Implementado filtro com suporte a pesquisa combinada usando o operador & |
 | 24/04/2025 | Eficiência de Produção | Filtros de data | Concluído | Adicionados filtros por data de criação e data de lançamento da malha |
 | 24/04/2025 | Eficiência de Produção | Adicionar filtro por lista de itens | Concluído | Implementada opção para alternar entre filtro por texto e seleção direta de item específico |
+| 25/04/2025 | Fluxo de Produção | Implementar visualização de funil de produção | Concluído | Implementado funil mostrando número de ordens em cada estágio do processo |
+| 25/04/2025 | Fluxo de Produção | Implementar tempo médio em cada estágio | Concluído | Adicionado gráfico de barras com tempo médio em dias para cada estágio |
+| 25/04/2025 | Fluxo de Produção | Implementar identificação de gargalos | Concluído | Adicionada análise de gargalos com destaque para estágios críticos |
+| 25/04/2025 | Fluxo de Produção | Criar mapa de calor de atividade | Concluído | Implementado gráfico de barras mostrando volume de recebimentos e lançamentos por dia da semana |
+| 25/04/2025 | Fluxo de Produção | Adicionar filtros por período e tipo de produto | Concluído | Implementados filtros de data e tipo de produto |
+| 25/04/2025 | Fluxo de Produção | Implementar alertas para ordens paradas | Concluído | Adicionado alerta para estágios com maior número de ordens paradas por mais tempo |
