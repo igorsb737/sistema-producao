@@ -249,7 +249,10 @@ const NovaOrdemProducao = () => {
     if (Object.keys(grades).length === 0) {
       erros.push('É necessário adicionar pelo menos uma grade de produção');
     } else {
-      const gradesInvalidas = Object.values(grades).some(grade => !grade.codigo || !grade.quantidadePrevista);
+      const gradesInvalidas = Object.values(grades).some(grade => 
+        // Verifica se há um produto selecionado (pelo ID ou nome) e se a quantidade está preenchida
+        (!grade.produtoId && !grade.nome) || !grade.quantidadePrevista
+      );
       if (gradesInvalidas) {
         erros.push('Todas as grades devem ter um item e quantidade prevista preenchidos');
       }
