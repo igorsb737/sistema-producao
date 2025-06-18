@@ -245,13 +245,9 @@ const DashboardEficiencia = () => {
       setRendimentoPorMalha(rendimentosPorMalha);
       
       // Calcular rendimento por item
-      const rendimentosPorItemArray: Record<string, {rendimento: number, camisetas: number, malha: number}> = {};
+      const rendimentosPorItemArray: Record<string, number> = {};
       Object.entries(rendimentosPorItemMap).forEach(([item, dados]) => {
-        rendimentosPorItemArray[item] = {
-          rendimento: dados.malha > 0 ? dados.camisetas / dados.malha : 0,
-          camisetas: dados.camisetas,
-          malha: dados.malha
-        };
+        rendimentosPorItemArray[item] = dados.malha > 0 ? dados.camisetas / dados.malha : 0;
       });
       
       setRendimentoPorItem(rendimentosPorItemArray);
@@ -656,7 +652,7 @@ const DashboardEficiencia = () => {
                 <Box sx={{ height: 400, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={Object.entries(rendimentoPorItem).map(([item, {rendimento, camisetas, malha}]) => ({ item, rendimento, camisetas, malha }))}
+                      data={Object.entries(rendimentoPorItem).map(([item, rendimento]) => ({ item, rendimento }))}
                       margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
@@ -697,11 +693,11 @@ const DashboardEficiencia = () => {
                 ) : (
                   <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     {Object.entries(rendimentoPorItem)
-                      .sort(([, a], [, b]) => b.rendimento - a.rendimento)
-                      .map(([item, {rendimento, camisetas, malha}]) => (
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([item, rendimento]) => (
                         <Box key={item} sx={{ mb: 2 }}>
                           <Typography variant="body2" sx={{ mb: 0.5 }}>
-                            {item} - {camisetas}pçs - {malha.toFixed(2)}kg
+                            {item}
                           </Typography>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Box sx={{ flexGrow: 1, mr: 1 }}>
@@ -836,7 +832,4 @@ const DashboardEficiencia = () => {
 };
 
 export default DashboardEficiencia;
-
-
-
 
