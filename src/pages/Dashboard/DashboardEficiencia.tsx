@@ -46,9 +46,9 @@ interface RendimentoItem {
 const DashboardEficiencia = () => {
   const { ordens, loading } = useOrdemProducao();
   const [rendimentoMedio, setRendimentoMedio] = useState<number | null>(null);
-  const [rendimentoPorMalha, setRendimentoPorMalha] = useState<Record<string, number>>({});
+  const [rendimentoPorMalha, setRendimentoPorMalha] = useState<Record<string, {rendimento: number, camisetas: number, malha: number}>>({});
   const [rendimentoPorItem, setRendimentoPorItem] = useState<Record<string, number>>({});
-  const [rendimentoPorOP, setRendimentoPorOP] = useState<Record<string, {rendimento: number, item: string}>>({});
+  const [rendimentoPorOP, setRendimentoPorOP] = useState<Record<string, {rendimento: number, item: string, camisetas: number, malha: number}>>({});
   const [relacaoMalhaCamisetas, setRelacaoMalhaCamisetas] = useState<number | null>(null);
   const [loadingDados, setLoadingDados] = useState(true);
   const [dadosGrafico, setDadosGrafico] = useState<DataPoint[]>([]);
@@ -233,9 +233,13 @@ const DashboardEficiencia = () => {
       setRendimentoMedio(rendimentoGeral);
       
       // Calcular rendimento por tipo de malha
-      const rendimentosPorMalha: Record<string, number> = {};
+      const rendimentosPorMalha: Record<string, {rendimento: number, camisetas: number, malha: number}> = {};
       Object.entries(rendimentosPorTipo).forEach(([tipo, dados]) => {
-        rendimentosPorMalha[tipo] = dados.malha > 0 ? dados.camisetas / dados.malha : 0;
+        rendimentosPorMalha[tipo] = {
+          rendimento: dados.malha > 0 ? dados.camisetas / dados.malha : 0,
+          camisetas: dados.camisetas,
+          malha: dados.malha
+        };
       });
       
       setRendimentoPorMalha(rendimentosPorMalha);
@@ -249,11 +253,13 @@ const DashboardEficiencia = () => {
       setRendimentoPorItem(rendimentosPorItemArray);
       
       // Calcular rendimento por OP
-      const rendimentosPorOPArray: Record<string, {rendimento: number, item: string}> = {};
+      const rendimentosPorOPArray: Record<string, {rendimento: number, item: string, camisetas: number, malha: number}> = {};
       Object.entries(rendimentosPorOPMap).forEach(([op, dados]) => {
         rendimentosPorOPArray[op] = {
           rendimento: dados.malha > 0 ? dados.camisetas / dados.malha : 0,
-          item: dados.item
+          item: dados.item,
+          camisetas: dados.camisetas,
+          malha: dados.malha
         };
       });
       
@@ -669,56 +675,6 @@ const DashboardEficiencia = () => {
           
           {/* Cards de métricas na parte inferior */}
           <Grid container spacing={3} sx={{ mt: 3 }}>
-            {/* Card de Rendimento por Tipo de Malha */}
-            <Grid item xs={12}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Rendimento por Tipo de Malha
-                </Typography>
-                
-                {loadingDados ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                  </Box>
-                ) : Object.keys(rendimentoPorMalha).length === 0 ? (
-                  <Typography variant="body1" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-                    Nenhum dado disponível para os filtros selecionados
-                  </Typography>
-                ) : (
-                  <Box>
-                    {Object.entries(rendimentoPorMalha)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([malha, rendimento]) => (
-                        <Box key={malha} sx={{ mb: 2 }}>
-                          <Typography variant="body2" sx={{ mb: 0.5 }}>
-                            {malha}
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box sx={{ flexGrow: 1, mr: 1 }}>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={100} 
-                                sx={{ 
-                                  height: 10, 
-                                  borderRadius: 5,
-                                  backgroundColor: '#f0f0f0',
-                                  '& .MuiLinearProgress-bar': {
-                                    backgroundColor: '#f44336'
-                                  }
-                                }} 
-                              />
-                            </Box>
-                            <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'right' }}>
-                              {rendimento.toFixed(2)} camisetas/kg
-                            </Typography>
-                          </Box>
-                        </Box>
-                      ))}
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
-            
             {/* Card de Rendimento por Item */}
             <Grid item xs={12}>
               <Paper sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -788,11 +744,10 @@ const DashboardEficiencia = () => {
                   <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     {Object.entries(rendimentoPorOP)
                       .sort(([, a], [, b]) => b.rendimento - a.rendimento)
-                      .slice(0, 5) // Limitar aos 5 melhores
-                      .map(([op, { rendimento, item }]) => (
+                      .map(([op, { rendimento, item, camisetas, malha }]) => (
                         <Box key={op} sx={{ mb: 2 }}>
                           <Typography variant="body2" sx={{ mb: 0.5 }}>
-                            OP {op} - {item}
+                            OP {op} - {item} - {camisetas}pçs - {malha.toFixed(2)}kg
                           </Typography>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Box sx={{ flexGrow: 1, mr: 1 }}>
@@ -805,6 +760,56 @@ const DashboardEficiencia = () => {
                                   backgroundColor: '#f0f0f0',
                                   '& .MuiLinearProgress-bar': {
                                     backgroundColor: '#81c784'
+                                  }
+                                }} 
+                              />
+                            </Box>
+                            <Typography variant="body2" sx={{ minWidth: 60, textAlign: 'right' }}>
+                              {rendimento.toFixed(2)} camisetas/kg
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+            
+            {/* Card de Rendimento por Tipo de Malha */}
+            <Grid item xs={12}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Rendimento por Tipo de Malha
+                </Typography>
+                
+                {loadingDados ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : Object.keys(rendimentoPorMalha).length === 0 ? (
+                  <Typography variant="body1" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+                    Nenhum dado disponível para os filtros selecionados
+                  </Typography>
+                ) : (
+                  <Box>
+                    {Object.entries(rendimentoPorMalha)
+                      .sort(([, a], [, b]) => b.rendimento - a.rendimento)
+                      .map(([malha, { rendimento, camisetas, malha: malhaUsada }]) => (
+                        <Box key={malha} sx={{ mb: 2 }}>
+                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                            {malha} - {camisetas}pçs - {malhaUsada.toFixed(2)}kg
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box sx={{ flexGrow: 1, mr: 1 }}>
+                              <LinearProgress 
+                                variant="determinate" 
+                                value={100} 
+                                sx={{ 
+                                  height: 10, 
+                                  borderRadius: 5,
+                                  backgroundColor: '#f0f0f0',
+                                  '& .MuiLinearProgress-bar': {
+                                    backgroundColor: '#f44336'
                                   }
                                 }} 
                               />
