@@ -18,8 +18,12 @@ import {
   Stack,
   ToggleButtonGroup,
   ToggleButton,
-  LinearProgress
+  LinearProgress,
+  IconButton,
+  Collapse
 } from '@mui/material';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
@@ -48,7 +52,8 @@ const DashboardEficiencia = () => {
   const [rendimentoMedio, setRendimentoMedio] = useState<number | null>(null);
   const [rendimentoPorMalha, setRendimentoPorMalha] = useState<Record<string, {rendimento: number, camisetas: number, malha: number}>>({});
   const [rendimentoPorItem, setRendimentoPorItem] = useState<Record<string, {rendimento: number, camisetas: number, malha: number}>>({});
-  const [rendimentoPorOP, setRendimentoPorOP] = useState<Record<string, {rendimento: number, item: string, camisetas: number, malha: number}>>({});
+  const [rendimentoPorOP, setRendimentoPorOP] = useState<Record<string, {rendimento: number, item: string, camisetas: number, malha: number, grades?: any}>>({});
+  const [expandidasOPs, setExpandidasOPs] = useState<Record<string, boolean>>({});
   const [relacaoMalhaCamisetas, setRelacaoMalhaCamisetas] = useState<number | null>(null);
   const [loadingDados, setLoadingDados] = useState(true);
   const [dadosGrafico, setDadosGrafico] = useState<DataPoint[]>([]);
@@ -189,7 +194,7 @@ const DashboardEficiencia = () => {
       const rendimentosPorItemMap: Record<string, { camisetas: number; malha: number }> = {};
       
       // Agrupar por OP para cálculo de rendimento por OP
-      const rendimentosPorOPMap: Record<string, { camisetas: number; malha: number; item: string }> = {};
+      const rendimentosPorOPMap: Record<string, { camisetas: number; malha: number; item: string; grades?: any }> = {};
       
       ordensFinalizadas.forEach((ordem) => {
         if (!ordem.lancamentoMalha) return;
@@ -221,7 +226,7 @@ const DashboardEficiencia = () => {
         // Agrupar por OP
         const numeroOP = ordem.informacoesGerais.numero;
         if (!rendimentosPorOPMap[numeroOP]) {
-          rendimentosPorOPMap[numeroOP] = { camisetas: 0, malha: 0, item: nomeItem };
+          rendimentosPorOPMap[numeroOP] = { camisetas: 0, malha: 0, item: nomeItem, grades: ordem.grades };
         }
         
         rendimentosPorOPMap[numeroOP].camisetas += camisetasOrdem;
@@ -257,13 +262,14 @@ const DashboardEficiencia = () => {
       setRendimentoPorItem(rendimentosPorItemArray);
       
       // Calcular rendimento por OP
-      const rendimentosPorOPArray: Record<string, {rendimento: number, item: string, camisetas: number, malha: number}> = {};
+      const rendimentosPorOPArray: Record<string, {rendimento: number, item: string, camisetas: number, malha: number, grades?: any}> = {};
       Object.entries(rendimentosPorOPMap).forEach(([op, dados]) => {
         rendimentosPorOPArray[op] = {
           rendimento: dados.malha > 0 ? dados.camisetas / dados.malha : 0,
           item: dados.item,
           camisetas: dados.camisetas,
-          malha: dados.malha
+          malha: dados.malha,
+          grades: dados.grades
         };
       });
       
@@ -748,12 +754,26 @@ const DashboardEficiencia = () => {
                   <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     {Object.entries(rendimentoPorOP)
                       .sort(([, a], [, b]) => b.rendimento - a.rendimento)
-                      .map(([op, { rendimento, item, camisetas, malha }]) => (
+                      .map(([op, { rendimento, item, camisetas, malha, grades }]) => (
                         <Box key={op} sx={{ mb: 2 }}>
-                          <Typography variant="body2" sx={{ mb: 0.5 }}>
-                            OP {op} - {item} - {camisetas}pçs - {malha.toFixed(2)}kg
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                            <IconButton
+                              aria-label={expandidasOPs[op] ? 'ocultar grades' : 'mostrar grades'}
+                              size="small"
+                              onClick={() => setExpandidasOPs(prev => ({
+                                ...prev,
+                                [op]: !prev[op]
+                              }))}
+                              sx={{ mr: 1, p: 0.25 }}
+                            >
+                              {expandidasOPs[op] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                            </IconButton>
+                            <Typography variant="body2">
+                              OP {op} - {item} - {camisetas}pçs - {malha.toFixed(2)}kg
+                            </Typography>
+                          </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box sx={{ width: 28 }} /> {/* Espaço para alinhar com o botão acima */}
                             <Box sx={{ flexGrow: 1, mr: 1 }}>
                               <LinearProgress 
                                 variant="determinate" 
@@ -772,6 +792,50 @@ const DashboardEficiencia = () => {
                               {rendimento.toFixed(2)} camisetas/kg
                             </Typography>
                           </Box>
+                          
+                          {/* Grades da OP - Expandível */}
+                          <Collapse in={expandidasOPs[op]} timeout="auto" unmountOnExit>
+                            <Box sx={{ mt: 1, ml: 4, border: '1px solid #eee', borderRadius: 1, p: 1 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                                Grades
+                              </Typography>
+                              {grades && Object.entries(grades).length > 0 ? (
+                                <Grid container spacing={1}>
+                                  {Object.entries(grades).map(([gradeKey, gradeData]: [string, any]) => {
+                                    const nomeGradeFormatado = gradeData.codigo || // Primeira opção: código da grade 
+                                                           gradeData.nome || // Segunda opção: nome já formatado
+                                                           (gradeKey.includes('COR:') ? gradeKey : null) || // Verificar se a chave tem formato
+                                                           `${item} COR:${gradeData.cor || ''};TAMANHO:${gradeData.tamanho || ''}` || // Construir formato padrão
+                                                           'Grade'; // Fallback
+                                    
+                                    return (
+                                      <Grid item xs={12} sm={6} md={4} lg={3} key={gradeKey}>
+                                        <Box sx={{ backgroundColor: '#f9f9f9', p: 1, borderRadius: 1 }}>
+                                          <Typography variant="caption" sx={{ fontWeight: 'bold', wordBreak: 'break-word', display: 'block', mb: 0.5 }}>
+                                            {nomeGradeFormatado}
+                                          </Typography>
+                                          <Box>
+                                            <Typography variant="caption" display="block">
+                                              Planejado: {gradeData.quantidade || gradeData.quantidadePrevista || 0} pçs
+                                            </Typography>
+                                            {gradeData.recebimentos && (
+                                              <Typography variant="caption" display="block">
+                                                Recebido: {gradeData.recebimentos.reduce((total: number, rec: any) => total + rec.quantidade, 0)} pçs
+                                              </Typography>
+                                            )}
+                                          </Box>
+                                        </Box>
+                                      </Grid>
+                                    );
+                                  })}
+                                </Grid>
+                              ) : (
+                                <Typography variant="caption" color="text.secondary">
+                                  Nenhuma informação de grade disponível
+                                </Typography>
+                              )}
+                            </Box>
+                          </Collapse>
                         </Box>
                       ))}
                   </Box>
